@@ -1,1 +1,1 @@
-# bybit-bot
+# crypto-trading-bot

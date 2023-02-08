@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Minish144/bybit-bot/clients"
-	"github.com/Minish144/bybit-bot/clients/bybit"
-	"github.com/Minish144/bybit-bot/config"
-	"github.com/Minish144/bybit-bot/logger"
+	"github.com/Minish144/crypto-trading-bot/clients"
+	"github.com/Minish144/crypto-trading-bot/clients/bybit"
+	"github.com/Minish144/crypto-trading-bot/config"
+	"github.com/Minish144/crypto-trading-bot/logger"
 	"go.uber.org/zap"
 )
 

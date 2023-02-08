@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"github.com/Minish144/bybit-bot/config"
+	"github.com/Minish144/crypto-trading-bot/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

@@ -1,4 +1,4 @@
-module github.com/Minish144/bybit-bot
+module github.com/Minish144/crypto-trading-bot
 
 go 1.18
 

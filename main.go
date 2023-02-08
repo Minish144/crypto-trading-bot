@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Minish144/bybit-bot/di"
+	"github.com/Minish144/crypto-trading-bot/di"
 	"go.uber.org/zap"
 )
 
