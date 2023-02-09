@@ -33,4 +33,14 @@ test-richgo:
 gosec:
 	@docker run --rm -v $(PWD):/app -w /app ${DOCKER_PROXY}/securego/gosec /app/...
 
+path=$(dir ${file})
+filename=$(notdir ${file})
+mocks: # 'make mocks file=<filepath with interface>'
+	@mockgen -source=${file} -destination=${path}mocks/${filename} -package mocks
+	@echo "Generated mock '${path}mocks/${filename}'"
+
+file=$(file)
+gotests: # 'make gotests file=<filepath>'
+	@gotests -w -exported ${file}
+
 .DEFAULT_GOAL=run

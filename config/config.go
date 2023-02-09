@@ -10,8 +10,11 @@ type Config struct {
 	LogEncoding string `env:"LOG_ENCODING" envDefault:"json"`
 
 	ExchangesEnables struct {
-		Bybit bool `env:"EXCHANGE_BYBIT_ENABLE" envDefault:"true"`
+		Bybit   bool `env:"EXCHANGE_BYBIT_ENABLE"   envDefault:"false"`
+		Binance bool `env:"EXCHANGE_BINANCE_ENABLE" envDefault:"true"`
 	}
+
+	Test bool `env:"TEST" envDefault:"true"`
 }
 
 func NewConfig() (*Config, error) {
