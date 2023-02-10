@@ -15,4 +15,6 @@ type HttpClient interface {
 	// Orders
 	NewLimitBuyOrder(ctx context.Context, symbol string, price, quantity float64) error
 	NewLimitSellOrder(ctx context.Context, symbol string, price, quantity float64) error
+	GetOpenOrders(ctx context.Context, symbol string) ([]*models.Order, error)
+	CloseOrder(ctx context.Context, symbol string, orderId int64) error
 }

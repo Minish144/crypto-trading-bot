@@ -15,15 +15,11 @@ type BybitClient struct {
 }
 
 func NewBybitClient(c *Config, test bool) *BybitClient {
-	client := hirokisanBybit.NewClient().WithAuth(c.Key, c.Secret)
-
-	return &BybitClient{client}
+	return &BybitClient{hirokisanBybit.NewClient().WithAuth(c.Key, c.Secret)}
 }
 
 func (c *BybitClient) Ping(ctx context.Context) error {
-	_, err := c.Future().USDTPerpetual().APIKeyInfo()
-
-	return err
+	return ErrNotImplemented
 }
 
 func (c *BybitClient) GetPrice(ctx context.Context, symbol string) (float64, error) {
@@ -44,4 +40,12 @@ func (c *BybitClient) NewLimitSellOrder(ctx context.Context, symbol string, pric
 
 func (c *BybitClient) GetAssets(ctx context.Context) ([]models.Asset, error) {
 	return nil, ErrNotImplemented
+}
+
+func (c *BybitClient) GetOpenOrders(ctx context.Context, symbol string) ([]*models.Order, error) {
+	return nil, ErrNotImplemented
+}
+
+func (c *BybitClient) CloseOrder(ctx context.Context, symbol string, orderId int64) error {
+	return ErrNotImplemented
 }
