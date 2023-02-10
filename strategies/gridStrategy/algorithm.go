@@ -6,6 +6,17 @@ import (
 )
 
 func (s *GridStrategy) Start(ctx context.Context) error {
+	go func() {
+		for {
+			select {
+			case <-time.NewTicker(1 * time.Minute).C:
+				s.checkBalances(ctx)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
 		case <-time.NewTicker(s.cfg.Interval).C:
@@ -16,23 +27,12 @@ func (s *GridStrategy) Start(ctx context.Context) error {
 				continue
 			}
 
-			s.z.Infow(
-				"price",
-				"amount", price,
-			)
-
 			// check the balance of the account
 			balance, err := s.client.GetBalance(ctx, s.cfg.Coins.Base)
 			if err != nil {
 				s.z.Warnw("failed to get balance", "error", err.Error())
 				continue
 			}
-
-			s.z.Infow(
-				"balance",
-				"base", s.cfg.Coins.Base,
-				"amount", balance,
-			)
 
 			sellLevels, buyLevels := s.generateGrids(price)
 
@@ -55,6 +55,40 @@ func (s *GridStrategy) generateGrids(price float64) ([]float64, []float64) {
 	}
 
 	return sellLevels, buyLevels
+}
+
+func (s *GridStrategy) checkBalances(ctx context.Context) {
+	// check the balance of the account
+	balance, err := s.client.GetBalance(ctx, s.cfg.Coins.Base)
+	if err != nil {
+		s.z.Warnw("failed to get balance", "error", err.Error())
+		return
+	}
+
+	s.z.Infow(
+		"balance",
+		"coin", s.cfg.Coins.Base,
+		"amount", balance,
+	)
+
+	balanceQuote, err := s.client.GetBalance(ctx, s.cfg.Coins.Quote)
+	if err != nil {
+		s.z.Warnw("failed to get balance", "error", err.Error())
+		return
+	}
+
+	price, err := s.client.GetPrice(ctx, s.cfg.Symbol)
+	if err != nil {
+		s.z.Warnw("failed to get price", "error", err.Error())
+		return
+	}
+
+	s.z.Infow(
+		"balance",
+		"coin", s.cfg.Coins.Quote,
+		"amount", balanceQuote,
+		"base_equivalent", price*balanceQuote,
+	)
 }
 
 func (s *GridStrategy) placeSellOrders(ctx context.Context, levels []float64, price, balance float64) {

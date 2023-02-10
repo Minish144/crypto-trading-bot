@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Minish144/crypto-trading-bot/models"
 	"github.com/Minish144/crypto-trading-bot/utils"
 	gobinance "github.com/adshao/go-binance/v2"
 )
@@ -106,4 +107,33 @@ func (c *BinanceClient) GetBalance(ctx context.Context, coin string) (float64, e
 	}
 
 	return balance, nil
+}
+
+func (c *BinanceClient) GetAssets(ctx context.Context) ([]models.Asset, error) {
+	account, err := c.NewGetAccountService().Do(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("client.NewGetAccountService: %s", err.Error())
+	}
+
+	assets := make([]models.Asset, len(account.Balances))
+
+	for i, asset := range account.Balances {
+		free, err := utils.StringToFloat64(asset.Free)
+		if err != nil {
+			return nil, fmt.Errorf("utils.StringToFloat64: %w", err)
+		}
+
+		locked, err := utils.StringToFloat64(asset.Locked)
+		if err != nil {
+			return nil, fmt.Errorf("utils.StringToFloat64: %w", err)
+		}
+
+		assets[i] = models.Asset{
+			Coin:   asset.Asset,
+			Free:   free,
+			Locked: locked,
+		}
+	}
+
+	return assets, nil
 }

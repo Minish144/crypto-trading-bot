@@ -8,6 +8,7 @@ import (
 	"github.com/Minish144/crypto-trading-bot/clients/binance"
 	"github.com/Minish144/crypto-trading-bot/clients/bybit"
 	"github.com/Minish144/crypto-trading-bot/config"
+	"github.com/Minish144/crypto-trading-bot/helpers"
 	"github.com/Minish144/crypto-trading-bot/logger"
 	"github.com/Minish144/crypto-trading-bot/strategies"
 	"github.com/Minish144/crypto-trading-bot/strategies/gridStrategy"
@@ -27,6 +28,10 @@ type DI struct {
 			Config     *binance.Config
 			HttpClient clients.HttpClient
 		}
+	}
+
+	Helpers struct {
+		BinanceHelper *helpers.Helper
 	}
 
 	Strategies []strategies.Strategy
@@ -71,6 +76,8 @@ func NewDI() (*DI, error) {
 		return nil, fmt.Errorf("gridStrategy.NewConfigFromEnv: %w", err)
 	}
 
+	dic.Helpers.BinanceHelper = helpers.NewHelper(dic.Exchanges.Binance.HttpClient, dic.Config.BaseCoin)
+
 	dic.Strategies = append(
 		dic.Strategies,
 		strategies.NewGridStrategy(
@@ -102,6 +109,8 @@ func (dic *DI) Start(ctx context.Context) context.Context {
 			)
 		}
 	}
+
+	go dic.Helpers.BinanceHelper.StartLoggingHelpers(ctx)
 
 	for _, strategy := range dic.Strategies {
 		z.Infow("starting strategy", "name", strategy.Name())

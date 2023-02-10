@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/Minish144/crypto-trading-bot/models"
 	hirokisanBybit "github.com/hirokisan/bybit/v2"
 )
 
@@ -39,4 +40,8 @@ func (c *BybitClient) NewLimitBuyOrder(ctx context.Context, symbol string, price
 
 func (c *BybitClient) NewLimitSellOrder(ctx context.Context, symbol string, price, quantity float64) error {
 	return ErrNotImplemented
+}
+
+func (c *BybitClient) GetAssets(ctx context.Context) ([]models.Asset, error) {
+	return nil, ErrNotImplemented
 }
