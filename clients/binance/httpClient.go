@@ -52,11 +52,50 @@ func (c *BinanceClient) GetPrice(ctx context.Context, symbol string) (float64, e
 	return pricef64, nil
 }
 
-func (c *BinanceClient) NewLimitBuyOrder(ctx context.Context, symbol string, price, quantity float64) error {
-	return c.newBinanceOrder(ctx, symbol, gobinance.SideTypeBuy, gobinance.OrderTypeLimit, price, quantity)
+func (c *BinanceClient) NewOrder(
+	ctx context.Context,
+	symbol string,
+	sideType models.SideType,
+	orderType models.OrderType,
+	price, quantity float64,
+) error {
+	side, ok := stFromModels[sideType]
+	if !ok {
+		return fmt.Errorf("failed to convert field to binance-type field")
+	}
+
+	oType, ok := otFromModels[orderType]
+	if !ok {
+		return fmt.Errorf("failed to convert field to binance-type field")
+	}
+
+	return c.newBinanceOrder(
+		ctx,
+		symbol,
+		side,
+		oType,
+		price,
+		quantity,
+	)
 }
 
-func (c *BinanceClient) NewLimitSellOrder(ctx context.Context, symbol string, price, quantity float64) error {
+func (c *BinanceClient) NewLimitBuyOrder(ctx context.Context, symbol string, price, quantity float64) error {
+	return c.newBinanceOrder(
+		ctx,
+		symbol,
+		gobinance.SideTypeBuy,
+		gobinance.OrderTypeLimit,
+		price,
+		quantity,
+	)
+}
+
+func (c *BinanceClient) NewLimitSellOrder(
+	ctx context.Context,
+	symbol string,
+	price,
+	quantity float64,
+) error {
 	return c.newBinanceOrder(ctx, symbol, gobinance.SideTypeSell, gobinance.OrderTypeLimit, price, quantity)
 }
 
@@ -164,4 +203,8 @@ func (c *BinanceClient) CloseOrder(ctx context.Context, symbol string, orderId i
 	}
 
 	return nil
+}
+
+func (c *BinanceClient) NewStopLoss(ctx context.Context, symbol string) error {
+
 }

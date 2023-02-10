@@ -13,6 +13,13 @@ type HttpClient interface {
 	GetAssets(ctx context.Context) ([]models.Asset, error)
 
 	// Orders
+	NewOrder(
+		ctx context.Context,
+		symbol string,
+		sideType models.SideType,
+		orderType models.OrderType,
+		price, quantity float64,
+	) error
 	NewLimitBuyOrder(ctx context.Context, symbol string, price, quantity float64) error
 	NewLimitSellOrder(ctx context.Context, symbol string, price, quantity float64) error
 	GetOpenOrders(ctx context.Context, symbol string) ([]*models.Order, error)

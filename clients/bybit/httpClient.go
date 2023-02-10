@@ -30,6 +30,16 @@ func (c *BybitClient) GetBalance(ctx context.Context, coin string) (float64, err
 	return 0, ErrNotImplemented
 }
 
+func (c *BybitClient) NewOrder(
+	ctx context.Context,
+	symbol string,
+	sideType models.SideType,
+	orderType models.OrderType,
+	price, quantity float64,
+) error {
+	return ErrNotImplemented
+}
+
 func (c *BybitClient) NewLimitBuyOrder(ctx context.Context, symbol string, price, quantity float64) error {
 	return ErrNotImplemented
 }

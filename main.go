@@ -35,5 +35,5 @@ func main() {
 
 	ndi.Stop()
 
-	z.Info("bot stopped")
+	z.Info("bot has stopped")
 }
