@@ -205,3 +205,12 @@ func (c *BinanceClient) CloseOrder(ctx context.Context, symbol string, orderId i
 
 	return nil
 }
+
+func (c *BinanceClient) GetKlines(ctx context.Context, symbol string, interval models.Interval) {
+	intervalBinance := intervalFromModels[interval]
+
+	klines, err := c.NewKlinesService().
+		Symbol(symbol).
+		Interval(string(intervalBinance)).
+		Do(ctx)
+}

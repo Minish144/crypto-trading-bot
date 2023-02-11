@@ -38,3 +38,11 @@ const (
 	SideTypeBuy  SideType = "BUY"
 	SideTypeSell SideType = "SELL"
 )
+
+type Interval string
+
+const (
+	IntervalSecond Interval = "SECOND"
+	IntervalMinute Interval = "MINUTE"
+	IntervalDay    Interval = "DAY"
+)

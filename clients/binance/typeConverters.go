@@ -125,3 +125,79 @@ func OrdersFromModel(o *models.Order) (*gobinance.Order, error) {
 
 	return &oBinanceModel, nil
 }
+
+func KlinesToModel(k *gobinance.Kline) (*models.Kline, error) {
+	open, err := utils.StringToFloat64(k.Open)
+	if err != nil {
+		return nil, fmt.Errorf("failed to StringToFloat64 open: %w", err)
+	}
+
+	high, err := utils.StringToFloat64(k.High)
+	if err != nil {
+		return nil, fmt.Errorf("failed to StringToFloat64 high: %w", err)
+	}
+
+	low, err := utils.StringToFloat64(k.Low)
+	if err != nil {
+		return nil, fmt.Errorf("failed to StringToFloat64 low: %w", err)
+	}
+
+	cl, err := utils.StringToFloat64(k.Close)
+	if err != nil {
+		return nil, fmt.Errorf("failed to StringToFloat64 close: %w", err)
+	}
+
+	volume, err := utils.StringToFloat64(k.Volume)
+	if err != nil {
+		return nil, fmt.Errorf("failed to StringToFloat64 volume: %w", err)
+	}
+
+	qav, err := utils.StringToFloat64(k.QuoteAssetVolume)
+	if err != nil {
+		return nil, fmt.Errorf("failed to StringToFloat64 quoteAssetVolume: %w", err)
+	}
+
+	tbbav, err := utils.StringToFloat64(k.TakerBuyBaseAssetVolume)
+	if err != nil {
+		return nil, fmt.Errorf("failed to StringToFloat64 tradeNum: %w", err)
+	}
+
+	tbqav, err := utils.StringToFloat64(k.TakerBuyQuoteAssetVolume)
+	if err != nil {
+		return nil, fmt.Errorf("failed to StringToFloat64 tradeNum: %w", err)
+	}
+
+	kline := models.Kline{
+		OpenTime:                 k.OpenTime,
+		Open:                     open,
+		High:                     high,
+		Low:                      low,
+		Close:                    cl,
+		Volume:                   volume,
+		CloseTime:                k.CloseTime,
+		QuoteAssetVolume:         qav,
+		TradeNum:                 k.TradeNum,
+		TakerBuyBaseAssetVolume:  tbbav,
+		TakerBuyQuoteAssetVolume: tbqav,
+	}
+
+	return &kline, nil
+}
+
+func KlineFromModel(k *models.Kline) *gobinance.Kline {
+	kline := gobinance.Kline{
+		OpenTime:                 k.OpenTime,
+		Open:                     utils.Float64ToString(k.Open, pricePrecision),
+		High:                     utils.Float64ToString(k.High, pricePrecision),
+		Low:                      utils.Float64ToString(k.Low, pricePrecision),
+		Close:                    utils.Float64ToString(k.Close, pricePrecision),
+		Volume:                   utils.Float64ToString(k.Volume, quantityPrecision),
+		CloseTime:                k.CloseTime,
+		QuoteAssetVolume:         utils.Float64ToString(k.QuoteAssetVolume, quantityPrecision),
+		TradeNum:                 k.TradeNum,
+		TakerBuyBaseAssetVolume:  utils.Float64ToString(k.TakerBuyBaseAssetVolume, quantityPrecision),
+		TakerBuyQuoteAssetVolume: utils.Float64ToString(k.TakerBuyQuoteAssetVolume, quantityPrecision),
+	}
+
+	return &kline
+}

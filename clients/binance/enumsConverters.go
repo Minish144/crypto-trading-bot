@@ -74,3 +74,17 @@ var (
 		models.SideTypeSell: gobinance.SideTypeSell,
 	}
 )
+
+var (
+	intervalToModels = map[gobinance.RateLimitInterval]models.Interval{
+		gobinance.RateLimitIntervalSecond: models.IntervalSecond,
+		gobinance.RateLimitIntervalMinute: models.IntervalMinute,
+		gobinance.RateLimitIntervalDay:    models.IntervalDay,
+	}
+
+	intervalFromModels = map[models.Interval]gobinance.RateLimitInterval{
+		models.IntervalSecond: gobinance.RateLimitIntervalSecond,
+		models.IntervalMinute: gobinance.RateLimitIntervalMinute,
+		models.IntervalDay:    gobinance.RateLimitIntervalDay,
+	}
+)

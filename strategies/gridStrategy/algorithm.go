@@ -2,23 +2,28 @@ package gridStrategy
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/Minish144/crypto-trading-bot/models"
 	"go.uber.org/atomic"
 )
 
+const ordersCheckRetriesMax = 3
+
 func (s *GridStrategy) Start(ctx context.Context) error {
 	stopLoss := atomic.NewFloat64(0)
+	ordersChecksCounter := atomic.NewInt32(0)
 
 	go s.stopLoss(ctx, stopLoss)
 	go s.checkBalances(ctx)
-	go s.logic(ctx, stopLoss)
+	go s.logic(ctx, stopLoss, ordersChecksCounter)
 
 	for {
 		select {
 		case <-time.NewTicker(s.cfg.Interval).C:
 			go s.checkBalances(ctx)
-			go s.logic(ctx, stopLoss)
+			go s.logic(ctx, stopLoss, ordersChecksCounter)
 		case <-time.NewTicker(s.cfg.StopLossUpdatePeriod).C:
 			go s.stopLoss(ctx, stopLoss)
 		case <-ctx.Done():
@@ -27,7 +32,7 @@ func (s *GridStrategy) Start(ctx context.Context) error {
 	}
 }
 
-func (s *GridStrategy) logic(ctx context.Context, stopLoss *atomic.Float64) {
+func (s *GridStrategy) logic(ctx context.Context, stopLoss *atomic.Float64, ordersChecksCounter *atomic.Int32) {
 	// get the current price of the symbol
 	price, err := s.client.GetPrice(ctx, s.cfg.Symbol)
 	if err != nil {
@@ -35,8 +40,39 @@ func (s *GridStrategy) logic(ctx context.Context, stopLoss *atomic.Float64) {
 		return
 	}
 
+	// set stoploss
 	go s.stopLoss(ctx, stopLoss)
 
+	// increment checks counter
+	ordersChecksCounter.Inc()
+
+	// check whether all orders have been filled
+	filled, err := s.allOrdersFilled(ctx)
+	if err != nil {
+		s.z.Warnw("failed to check open orders", "error", err.Error())
+		return
+	} else if !filled {
+		return
+	}
+
+	// close all orders if more checks were performed than expected
+	if ordersChecksCounter.Load() >= ordersCheckRetriesMax {
+		orders, err := s.client.GetOpenOrders(ctx, s.cfg.Symbol)
+		if err != nil {
+			s.z.Warnw(
+				"failed to get open orders for stop loss",
+				"error", err.Error(),
+			)
+
+			return
+		}
+
+		s.closeOrders(ctx, orders)
+	}
+
+	ordersChecksCounter.Store(0)
+
+	// place buy and sell orders
 	sellLevels, buyLevels := s.generateGridsAndStopLoss(price)
 	s.placeSellOrders(ctx, sellLevels, price, s.cfg.OrderAmount)
 	s.placeBuyOrders(ctx, buyLevels, price, s.cfg.OrderAmount)
@@ -53,6 +89,15 @@ func (s *GridStrategy) generateGridsAndStopLoss(price float64) ([]float64, []flo
 	}
 
 	return sellLevels, buyLevels
+}
+
+func (s *GridStrategy) allOrdersFilled(ctx context.Context) (bool, error) {
+	orders, err := s.client.GetOpenOrders(ctx, s.cfg.Symbol)
+	if err != nil {
+		return false, fmt.Errorf("client.GetOpenOrders: %w", err)
+	}
+
+	return len(orders) == 0, nil
 }
 
 func (s *GridStrategy) checkBalances(ctx context.Context) {
@@ -89,6 +134,21 @@ func (s *GridStrategy) checkBalances(ctx context.Context) {
 	)
 }
 
+func (s *GridStrategy) closeOrders(ctx context.Context, orders []*models.Order) {
+	for _, order := range orders {
+		if err := s.client.CloseOrder(ctx, s.cfg.Symbol, order.OrderID); err != nil {
+			s.z.Warnw(
+				"failed to close order",
+				"side", "buy",
+				"type", "limit",
+				"price", order.Price,
+				"quantity", order.OrigQuantity,
+				"error", err.Error(),
+			)
+		}
+	}
+}
+
 // @TODO implement using stop-loss binance orders instead of market sell order
 func (s *GridStrategy) stopLoss(ctx context.Context, stopLoss *atomic.Float64) {
 	currentPrice, err := s.client.GetPrice(ctx, s.cfg.Symbol)
@@ -117,6 +177,8 @@ func (s *GridStrategy) stopLoss(ctx context.Context, stopLoss *atomic.Float64) {
 			return
 		}
 
+		go s.closeOrders(ctx, orders)
+
 		go func() {
 			balance, err := s.client.GetBalance(ctx, s.cfg.Coins.Quote)
 			if err != nil {
@@ -128,21 +190,6 @@ func (s *GridStrategy) stopLoss(ctx context.Context, stopLoss *atomic.Float64) {
 			}
 
 			s.client.NewLimitSellOrder(ctx, s.cfg.Symbol, currentPrice, balance)
-		}()
-
-		go func() {
-			for _, order := range orders {
-				if err := s.client.CloseOrder(ctx, s.cfg.Symbol, order.OrderID); err != nil {
-					s.z.Warnw(
-						"failed to close order after stop loss trigger",
-						"side", "buy",
-						"type", "limit",
-						"price", order.Price,
-						"quantity", order.OrigQuantity,
-						"error", err.Error(),
-					)
-				}
-			}
 		}()
 	}
 
@@ -160,13 +207,13 @@ func (s *GridStrategy) placeSellOrders(ctx context.Context, levels []float64, pr
 	// placing sell orders at each grid level
 	for i, gridLevel := range levels {
 		// calculate the size of the order
-		if err := s.client.NewLimitSellOrder(ctx, s.cfg.Symbol, gridLevel, quantity); err != nil {
+		if err := s.client.NewLimitSellOrder(ctx, s.cfg.Symbol, gridLevel*(1+s.cfg.GridStep), quantity); err != nil {
 			s.z.Warnw(
 				"failed to place order",
 				"side", "sell",
 				"type", "limit",
 				"multiplier", (1 + s.cfg.GridSize + (float64(i) * s.cfg.GridSize)),
-				"price", gridLevel,
+				"price", gridLevel*(1+s.cfg.GridStep),
 				"quantity", quantity,
 				"error", err.Error(),
 			)
@@ -179,7 +226,7 @@ func (s *GridStrategy) placeSellOrders(ctx context.Context, levels []float64, pr
 			"side", "sell",
 			"type", "limit",
 			"multiplier", (1 + s.cfg.GridSize + (float64(i) * s.cfg.GridSize)),
-			"price", gridLevel,
+			"price", gridLevel*(1+s.cfg.GridStep),
 			"quantity", quantity,
 		)
 	}
@@ -189,13 +236,13 @@ func (s *GridStrategy) placeBuyOrders(ctx context.Context, levels []float64, pri
 	// placing buy orders at each grid level
 	for i, gridLevel := range levels {
 		// calculate the size of the order
-		if err := s.client.NewLimitBuyOrder(ctx, s.cfg.Symbol, gridLevel, quantity); err != nil {
+		if err := s.client.NewLimitBuyOrder(ctx, s.cfg.Symbol, gridLevel*(1+s.cfg.GridStep), quantity); err != nil {
 			s.z.Warnw(
 				"failed to place order",
 				"side", "buy",
 				"type", "limit",
 				"multiplier", (1 - (float64(i) * s.cfg.GridSize)),
-				"price", gridLevel,
+				"price", gridLevel*(1+s.cfg.GridStep),
 				"quantity", quantity,
 				"error", err.Error(),
 			)
@@ -208,7 +255,7 @@ func (s *GridStrategy) placeBuyOrders(ctx context.Context, levels []float64, pri
 			"side", "buy",
 			"type", "limit",
 			"multiplier", (1 - (float64(i) * s.cfg.GridSize)),
-			"price", gridLevel,
+			"price", gridLevel*(1+s.cfg.GridStep),
 			"quantity", quantity,
 		)
 	}
