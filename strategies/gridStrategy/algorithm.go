@@ -49,7 +49,7 @@ func (s *GridStrategy) generateGridsAndStopLoss(price float64) ([]float64, []flo
 
 	for i := 1; i <= s.cfg.GridsAmount; i++ {
 		sellLevels[i-1] = price * (1 + s.cfg.GridSize + (float64(i) * s.cfg.GridSize))
-		buyLevels[i-1] = price * (1 - s.cfg.GridSize - (float64(i) * s.cfg.GridSize))
+		buyLevels[i-1] = price * (1 - (float64(i) * s.cfg.GridSize))
 	}
 
 	return sellLevels, buyLevels
@@ -194,7 +194,7 @@ func (s *GridStrategy) placeBuyOrders(ctx context.Context, levels []float64, pri
 				"failed to place order",
 				"side", "buy",
 				"type", "limit",
-				"multiplier", (1 - s.cfg.GridSize - (float64(i) * s.cfg.GridSize)),
+				"multiplier", (1 - (float64(i) * s.cfg.GridSize)),
 				"price", gridLevel,
 				"quantity", quantity,
 				"error", err.Error(),
@@ -207,7 +207,7 @@ func (s *GridStrategy) placeBuyOrders(ctx context.Context, levels []float64, pri
 			"new order",
 			"side", "buy",
 			"type", "limit",
-			"multiplier", (1 - s.cfg.GridSize - (float64(i) * s.cfg.GridSize)),
+			"multiplier", (1 - (float64(i) * s.cfg.GridSize)),
 			"price", gridLevel,
 			"quantity", quantity,
 		)
