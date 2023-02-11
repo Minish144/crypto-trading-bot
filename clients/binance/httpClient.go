@@ -204,7 +204,3 @@ func (c *BinanceClient) CloseOrder(ctx context.Context, symbol string, orderId i
 
 	return nil
 }
-
-func (c *BinanceClient) NewStopLoss(ctx context.Context, symbol string) error {
-
-}
