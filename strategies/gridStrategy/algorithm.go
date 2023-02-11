@@ -10,24 +10,16 @@ import (
 func (s *GridStrategy) Start(ctx context.Context) error {
 	stopLoss := atomic.NewFloat64(0)
 
-	go func() {
-		s.checkBalances(ctx)
-		s.logic(ctx, stopLoss)
-
-		for {
-			select {
-			case <-time.NewTicker(1 * time.Minute).C:
-				s.checkBalances(ctx)
-				s.logic(ctx, stopLoss)
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
+	go s.checkBalances(ctx)
+	go s.logic(ctx, stopLoss)
 
 	for {
 		select {
 		case <-time.NewTicker(s.cfg.Interval).C:
+			go s.checkBalances(ctx)
+			go s.logic(ctx, stopLoss)
+		case <-time.NewTicker(s.cfg.StopLossUpdatePeriod).C:
+			go s.stopLoss(ctx, stopLoss)
 		case <-ctx.Done():
 			return nil
 		}
@@ -42,20 +34,14 @@ func (s *GridStrategy) logic(ctx context.Context, stopLoss *atomic.Float64) {
 		return
 	}
 
-	go s.stopLoss(ctx, stopLoss.Load(), price)
+	go s.stopLoss(ctx, stopLoss)
 
-	sellLevels, buyLevels, stopLossValue := s.generateGridsAndStopLoss(price)
+	sellLevels, buyLevels := s.generateGridsAndStopLoss(price)
 	s.placeSellOrders(ctx, sellLevels, price, s.cfg.OrderAmount)
 	s.placeBuyOrders(ctx, buyLevels, price, s.cfg.OrderAmount)
-
-	stopLoss.Store(stopLossValue)
-	s.z.Infow(
-		"stop loss updated",
-		"amount", stopLoss,
-	)
 }
 
-func (s *GridStrategy) generateGridsAndStopLoss(price float64) ([]float64, []float64, float64) {
+func (s *GridStrategy) generateGridsAndStopLoss(price float64) ([]float64, []float64) {
 	// calculate the price levels for each grid
 	sellLevels := make([]float64, s.cfg.GridsAmount)
 	buyLevels := make([]float64, s.cfg.GridsAmount)
@@ -65,9 +51,7 @@ func (s *GridStrategy) generateGridsAndStopLoss(price float64) ([]float64, []flo
 		buyLevels[i-1] = price * (1 - (float64(i) * s.cfg.GridStep))
 	}
 
-	stopLoss := price * (1 - (1+float64(s.cfg.GridsAmount))*s.cfg.GridSize)
-
-	return sellLevels, buyLevels, stopLoss
+	return sellLevels, buyLevels
 }
 
 func (s *GridStrategy) checkBalances(ctx context.Context) {
@@ -104,8 +88,17 @@ func (s *GridStrategy) checkBalances(ctx context.Context) {
 	)
 }
 
-func (s *GridStrategy) stopLoss(ctx context.Context, stopLoss float64, currentPrice float64) {
-	if stopLoss != 0 && stopLoss >= currentPrice {
+func (s *GridStrategy) stopLoss(ctx context.Context, stopLoss *atomic.Float64) {
+	currentPrice, err := s.client.GetPrice(ctx, s.cfg.Symbol)
+	if err != nil {
+		s.z.Warnw(
+			"failed to get price for stop loss",
+			"error", err.Error(),
+		)
+		return
+	}
+
+	if stopLoss.Load() != 0 && stopLoss.Load() >= currentPrice {
 		s.z.Infow(
 			"stop loss triggered",
 			"current_price", currentPrice,
@@ -135,18 +128,23 @@ func (s *GridStrategy) stopLoss(ctx context.Context, stopLoss float64, currentPr
 			s.client.NewLimitSellOrder(ctx, s.cfg.Symbol, currentPrice, balance)
 		}()
 
-		for _, order := range orders {
-			if err := s.client.CloseOrder(ctx, s.cfg.Symbol, order.OrderID); err != nil {
-				s.z.Warnw(
-					"failed to close order after stop loss trigger",
-					"side", "buy",
-					"type", "limit",
-					"price", order.Price,
-					"quantity", order.OrigQuantity,
-					"error", err.Error(),
-				)
+		go func() {
+			for _, order := range orders {
+				if err := s.client.CloseOrder(ctx, s.cfg.Symbol, order.OrderID); err != nil {
+					s.z.Warnw(
+						"failed to close order after stop loss trigger",
+						"side", "buy",
+						"type", "limit",
+						"price", order.Price,
+						"quantity", order.OrigQuantity,
+						"error", err.Error(),
+					)
+				}
 			}
-		}
+		}()
+
+		stopLossActual := currentPrice * (1 - (1+float64(s.cfg.GridsAmount))*s.cfg.GridSize)
+		stopLoss.Store(stopLossActual)
 	}
 }
 
