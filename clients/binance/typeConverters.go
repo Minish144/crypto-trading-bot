@@ -126,7 +126,7 @@ func OrdersFromModel(o *models.Order) (*gobinance.Order, error) {
 	return &oBinanceModel, nil
 }
 
-func KlinesToModel(k *gobinance.Kline) (*models.Kline, error) {
+func KlineToModel(k *gobinance.Kline) (*models.Kline, error) {
 	open, err := utils.StringToFloat64(k.Open)
 	if err != nil {
 		return nil, fmt.Errorf("failed to StringToFloat64 open: %w", err)

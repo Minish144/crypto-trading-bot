@@ -59,3 +59,7 @@ func (c *BybitClient) GetOpenOrders(ctx context.Context, symbol string) ([]*mode
 func (c *BybitClient) CloseOrder(ctx context.Context, symbol string, orderId int64) error {
 	return ErrNotImplemented
 }
+
+func (c *BybitClient) GetKlines(ctx context.Context, symbol string, interval models.Interval) ([]*models.Kline, error) {
+	return nil, ErrNotImplemented
+}

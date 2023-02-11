@@ -206,11 +206,25 @@ func (c *BinanceClient) CloseOrder(ctx context.Context, symbol string, orderId i
 	return nil
 }
 
-func (c *BinanceClient) GetKlines(ctx context.Context, symbol string, interval models.Interval) {
+func (c *BinanceClient) GetKlines(ctx context.Context, symbol string, interval models.Interval) ([]*models.Kline, error) {
 	intervalBinance := intervalFromModels[interval]
 
 	klines, err := c.NewKlinesService().
 		Symbol(symbol).
 		Interval(string(intervalBinance)).
 		Do(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("c.NewKlinesService.Do: %w", err)
+	}
+
+	klinesModels := make([]*models.Kline, len(klines))
+
+	for i, kline := range klines {
+		klinesModels[i], err = KlineToModel(kline)
+		if err != nil {
+			return nil, fmt.Errorf("KlineToModel: %w", err)
+		}
+	}
+
+	return klinesModels, nil
 }

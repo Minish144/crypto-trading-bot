@@ -11,6 +11,7 @@ type HttpClient interface {
 	GetPrice(ctx context.Context, symbol string) (float64, error)
 	GetBalance(ctx context.Context, coin string) (float64, error)
 	GetAssets(ctx context.Context) ([]models.Asset, error)
+	GetKlines(ctx context.Context, symbol string, interval models.Interval) ([]*models.Kline, error)
 
 	// Orders
 	NewOrder(
