@@ -24,6 +24,7 @@ func NewBinanceClient(c *Config, test bool) *BinanceClient {
 		gobinance.UseTestnet = true
 		client.Client = gobinance.NewClient(c.TestKey, c.TestSecret)
 	} else {
+		fmt.Println(c.Key, c.Secret)
 		client.Client = gobinance.NewClient(c.Key, c.Secret)
 	}
 
@@ -100,8 +101,8 @@ func (c *BinanceClient) NewLimitSellOrder(
 }
 
 const (
-	pricePrecision    int = 2
-	quantityPrecision     = 6
+	pricePrecision    int = 5
+	quantityPrecision     = 8
 )
 
 func (c *BinanceClient) newBinanceOrder(

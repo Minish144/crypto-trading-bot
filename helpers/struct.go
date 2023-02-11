@@ -19,8 +19,6 @@ func NewHelper(c clients.HttpClient, baseCoin string) *Helper {
 }
 
 func (h *Helper) TotalHoldings(ctx context.Context) (float64, error) {
-	z := zap.S().With("context", "Helper.TotalHoldings")
-
 	assets, err := h.c.GetAssets(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("c.GetAssets: %w", err)
@@ -32,15 +30,11 @@ func (h *Helper) TotalHoldings(ctx context.Context) (float64, error) {
 	}
 
 	for _, asset := range assets {
-		if asset.Coin == h.baseCoin || asset.Coin == "BUSD" {
-			continue
-		}
-
 		pair := asset.Coin + h.baseCoin
 
 		holdings, err := h.c.GetPrice(ctx, pair)
 		if err != nil {
-			z.Warnw("failed to get price", "symbol", pair)
+			continue
 		}
 
 		balance += holdings
@@ -54,7 +48,7 @@ func (h *Helper) StartLoggingHelpers(ctx context.Context) {
 
 	for {
 		select {
-		case <-time.NewTicker(15 * time.Second).C:
+		case <-time.NewTicker(1 * time.Second).C:
 			balance, err := h.TotalHoldings(ctx)
 			if err != nil {
 				z.Warnw("failed to calculate total holdings", "error", err.Error())

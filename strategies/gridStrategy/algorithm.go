@@ -10,6 +10,7 @@ import (
 func (s *GridStrategy) Start(ctx context.Context) error {
 	stopLoss := atomic.NewFloat64(0)
 
+	go s.stopLoss(ctx, stopLoss)
 	go s.checkBalances(ctx)
 	go s.logic(ctx, stopLoss)
 
@@ -47,8 +48,8 @@ func (s *GridStrategy) generateGridsAndStopLoss(price float64) ([]float64, []flo
 	buyLevels := make([]float64, s.cfg.GridsAmount)
 
 	for i := 1; i <= s.cfg.GridsAmount; i++ {
-		sellLevels[i-1] = price * (1 + (float64(i) * s.cfg.GridStep))
-		buyLevels[i-1] = price * (1 - (float64(i) * s.cfg.GridStep))
+		sellLevels[i-1] = price * (1 + s.cfg.GridSize + (float64(i) * s.cfg.GridSize))
+		buyLevels[i-1] = price * (1 - s.cfg.GridSize - (float64(i) * s.cfg.GridSize))
 	}
 
 	return sellLevels, buyLevels
@@ -88,6 +89,7 @@ func (s *GridStrategy) checkBalances(ctx context.Context) {
 	)
 }
 
+// @TODO implement using stop-loss binance orders instead of market sell order
 func (s *GridStrategy) stopLoss(ctx context.Context, stopLoss *atomic.Float64) {
 	currentPrice, err := s.client.GetPrice(ctx, s.cfg.Symbol)
 	if err != nil {
@@ -119,7 +121,7 @@ func (s *GridStrategy) stopLoss(ctx context.Context, stopLoss *atomic.Float64) {
 			balance, err := s.client.GetBalance(ctx, s.cfg.Coins.Quote)
 			if err != nil {
 				s.z.Warnw(
-					"failed to get balance for stoploss",
+					"failed to get balance for stop loss",
 					"coin", s.cfg.Coins.Quote,
 					"error", err.Error(),
 				)
@@ -142,10 +144,16 @@ func (s *GridStrategy) stopLoss(ctx context.Context, stopLoss *atomic.Float64) {
 				}
 			}
 		}()
-
-		stopLossActual := currentPrice * (1 - (1+float64(s.cfg.GridsAmount))*s.cfg.GridSize)
-		stopLoss.Store(stopLossActual)
 	}
+
+	stopLossActual := currentPrice * (1 - (1+float64(s.cfg.GridsAmount))*s.cfg.GridSize)
+	s.z.Infow(
+		"stop loss updated",
+		"previous", stopLoss.Load(),
+		"current", stopLossActual,
+	)
+
+	stopLoss.Store(stopLossActual)
 }
 
 func (s *GridStrategy) placeSellOrders(ctx context.Context, levels []float64, price, quantity float64) {
@@ -157,7 +165,7 @@ func (s *GridStrategy) placeSellOrders(ctx context.Context, levels []float64, pr
 				"failed to place order",
 				"side", "sell",
 				"type", "limit",
-				"multiplier", (1 + (float64(i) * s.cfg.GridStep)),
+				"multiplier", (1 + s.cfg.GridSize + (float64(i) * s.cfg.GridSize)),
 				"price", gridLevel,
 				"quantity", quantity,
 				"error", err.Error(),
@@ -170,7 +178,7 @@ func (s *GridStrategy) placeSellOrders(ctx context.Context, levels []float64, pr
 			"new order",
 			"side", "sell",
 			"type", "limit",
-			"multiplier", (1 + (float64(i) * s.cfg.GridStep)),
+			"multiplier", (1 + s.cfg.GridSize + (float64(i) * s.cfg.GridSize)),
 			"price", gridLevel,
 			"quantity", quantity,
 		)
@@ -186,7 +194,7 @@ func (s *GridStrategy) placeBuyOrders(ctx context.Context, levels []float64, pri
 				"failed to place order",
 				"side", "buy",
 				"type", "limit",
-				"multiplier", (1 - (float64(i) * s.cfg.GridStep)),
+				"multiplier", (1 - s.cfg.GridSize - (float64(i) * s.cfg.GridSize)),
 				"price", gridLevel,
 				"quantity", quantity,
 				"error", err.Error(),
@@ -199,7 +207,7 @@ func (s *GridStrategy) placeBuyOrders(ctx context.Context, levels []float64, pri
 			"new order",
 			"side", "buy",
 			"type", "limit",
-			"multiplier", (1 - (float64(i) * s.cfg.GridStep)),
+			"multiplier", (1 - s.cfg.GridSize - (float64(i) * s.cfg.GridSize)),
 			"price", gridLevel,
 			"quantity", quantity,
 		)
