@@ -46,15 +46,6 @@ func (s *GridStrategy) logic(ctx context.Context, stopLoss *atomic.Float64, orde
 	// increment checks counter
 	ordersChecksCounter.Inc()
 
-	// check whether all orders have been filled
-	filled, err := s.allOrdersFilled(ctx)
-	if err != nil {
-		s.z.Warnw("failed to check open orders", "error", err.Error())
-		return
-	} else if !filled {
-		return
-	}
-
 	// close all orders if more checks were performed than expected
 	if ordersChecksCounter.Load() >= ordersCheckRetriesMax {
 		orders, err := s.client.GetOpenOrders(ctx, s.cfg.Symbol)
@@ -70,12 +61,21 @@ func (s *GridStrategy) logic(ctx context.Context, stopLoss *atomic.Float64, orde
 		s.closeOrders(ctx, orders)
 	}
 
-	ordersChecksCounter.Store(0)
+	// check whether all orders have been filled
+	filled, err := s.allOrdersFilled(ctx)
+	if err != nil {
+		s.z.Warnw("failed to check open orders", "error", err.Error())
+		return
+	} else if !filled {
+		return
+	}
 
 	// place buy and sell orders
 	sellLevels, buyLevels := s.generateGridsAndStopLoss(price)
 	s.placeSellOrders(ctx, sellLevels, price, s.cfg.OrderAmount)
 	s.placeBuyOrders(ctx, buyLevels, price, s.cfg.OrderAmount)
+
+	ordersChecksCounter.Store(0)
 }
 
 func (s *GridStrategy) generateGridsAndStopLoss(price float64) ([]float64, []float64) {
