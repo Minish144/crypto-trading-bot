@@ -207,14 +207,14 @@ func (s *GridStrategy) placeSellOrders(ctx context.Context, levels []float64, pr
 	// placing sell orders at each grid level
 	for i, gridLevel := range levels {
 		// calculate the size of the order
-		if err := s.client.NewLimitSellOrder(ctx, s.cfg.Symbol, gridLevel*(1+s.cfg.GridStep), quantity); err != nil {
+		if err := s.client.NewLimitSellOrder(ctx, s.cfg.Symbol, gridLevel, quantity*(1+s.cfg.GridStep)); err != nil {
 			s.z.Warnw(
 				"failed to place order",
 				"side", "sell",
 				"type", "limit",
 				"multiplier", (1 + s.cfg.GridSize + (float64(i) * s.cfg.GridSize)),
 				"price", gridLevel*(1+s.cfg.GridStep),
-				"quantity", quantity,
+				"quantity", quantity*(1+s.cfg.GridStep),
 				"error", err.Error(),
 			)
 
@@ -226,8 +226,8 @@ func (s *GridStrategy) placeSellOrders(ctx context.Context, levels []float64, pr
 			"side", "sell",
 			"type", "limit",
 			"multiplier", (1 + s.cfg.GridSize + (float64(i) * s.cfg.GridSize)),
-			"price", gridLevel*(1+s.cfg.GridStep),
-			"quantity", quantity,
+			"price", gridLevel,
+			"quantity", quantity*(1+s.cfg.GridStep),
 		)
 	}
 }
@@ -236,14 +236,14 @@ func (s *GridStrategy) placeBuyOrders(ctx context.Context, levels []float64, pri
 	// placing buy orders at each grid level
 	for i, gridLevel := range levels {
 		// calculate the size of the order
-		if err := s.client.NewLimitBuyOrder(ctx, s.cfg.Symbol, gridLevel*(1+s.cfg.GridStep), quantity); err != nil {
+		if err := s.client.NewLimitBuyOrder(ctx, s.cfg.Symbol, gridLevel, quantity*(1+s.cfg.GridStep)); err != nil {
 			s.z.Warnw(
 				"failed to place order",
 				"side", "buy",
 				"type", "limit",
 				"multiplier", (1 - (float64(i) * s.cfg.GridSize)),
-				"price", gridLevel*(1+s.cfg.GridStep),
-				"quantity", quantity,
+				"price", gridLevel,
+				"quantity", quantity*(1+s.cfg.GridStep),
 				"error", err.Error(),
 			)
 
@@ -255,7 +255,7 @@ func (s *GridStrategy) placeBuyOrders(ctx context.Context, levels []float64, pri
 			"side", "buy",
 			"type", "limit",
 			"multiplier", (1 - (float64(i) * s.cfg.GridSize)),
-			"price", gridLevel*(1+s.cfg.GridStep),
+			"price", gridLevel,
 			"quantity", quantity,
 		)
 	}
