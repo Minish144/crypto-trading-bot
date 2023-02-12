@@ -11,22 +11,22 @@ import (
 func OrdersToModel(o *gobinance.Order) (*models.Order, error) {
 	price, err := utils.StringToFloat64(o.Price)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 price: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 price: %w", err)
 	}
 
 	origQuantity, err := utils.StringToFloat64(o.OrigQuantity)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 origQuantity: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 origQuantity: %w", err)
 	}
 
 	executedQuantity, err := utils.StringToFloat64(o.ExecutedQuantity)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 executedQuantity: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 executedQuantity: %w", err)
 	}
 
 	cummulativeQuoteQuantity, err := utils.StringToFloat64(o.CummulativeQuoteQuantity)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 cummulativeQuoteQuantity: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 cummulativeQuoteQuantity: %w", err)
 	}
 
 	status, ok := ostToModels[o.Status]
@@ -51,12 +51,12 @@ func OrdersToModel(o *gobinance.Order) (*models.Order, error) {
 
 	stopPrice, err := utils.StringToFloat64(o.StopPrice)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 stopPrice: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 stopPrice: %w", err)
 	}
 
 	iceberg, err := utils.StringToFloat64(o.IcebergQuantity)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 icebergQuantity: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 icebergQuantity: %w", err)
 	}
 
 	oModel := models.Order{
@@ -129,42 +129,42 @@ func OrdersFromModel(o *models.Order) (*gobinance.Order, error) {
 func KlineToModel(k *gobinance.Kline) (*models.Kline, error) {
 	open, err := utils.StringToFloat64(k.Open)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 open: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 open: %w", err)
 	}
 
 	high, err := utils.StringToFloat64(k.High)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 high: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 high: %w", err)
 	}
 
 	low, err := utils.StringToFloat64(k.Low)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 low: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 low: %w", err)
 	}
 
 	cl, err := utils.StringToFloat64(k.Close)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 close: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 close: %w", err)
 	}
 
 	volume, err := utils.StringToFloat64(k.Volume)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 volume: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 volume: %w", err)
 	}
 
 	qav, err := utils.StringToFloat64(k.QuoteAssetVolume)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 quoteAssetVolume: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 quoteAssetVolume: %w", err)
 	}
 
 	tbbav, err := utils.StringToFloat64(k.TakerBuyBaseAssetVolume)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 tradeNum: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 tradeNum: %w", err)
 	}
 
 	tbqav, err := utils.StringToFloat64(k.TakerBuyQuoteAssetVolume)
 	if err != nil {
-		return nil, fmt.Errorf("failed to StringToFloat64 tradeNum: %w", err)
+		return nil, fmt.Errorf("StringToFloat64 tradeNum: %w", err)
 	}
 
 	kline := models.Kline{

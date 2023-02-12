@@ -96,7 +96,41 @@ func (c *BinanceClient) NewLimitSellOrder(
 	price,
 	quantity float64,
 ) error {
-	return c.newBinanceOrder(ctx, symbol, gobinance.SideTypeSell, gobinance.OrderTypeLimit, price, quantity)
+	return c.newBinanceOrder(
+		ctx,
+		symbol,
+		gobinance.SideTypeSell,
+		gobinance.OrderTypeLimit,
+		price,
+		quantity,
+	)
+}
+
+func (c *BinanceClient) NewMarketBuyOrder(ctx context.Context, symbol string, price, quantity float64) error {
+	return c.newBinanceOrder(
+		ctx,
+		symbol,
+		gobinance.SideTypeBuy,
+		gobinance.OrderTypeMarket,
+		price,
+		quantity,
+	)
+}
+
+func (c *BinanceClient) NewMarketSellOrder(
+	ctx context.Context,
+	symbol string,
+	price,
+	quantity float64,
+) error {
+	return c.newBinanceOrder(
+		ctx,
+		symbol,
+		gobinance.SideTypeSell,
+		gobinance.OrderTypeMarket,
+		price,
+		quantity,
+	)
 }
 
 const (
@@ -126,26 +160,34 @@ func (c *BinanceClient) newBinanceOrder(
 	return nil
 }
 
-func (c *BinanceClient) GetBalance(ctx context.Context, coin string) (float64, error) {
+func (c *BinanceClient) GetBalance(ctx context.Context, coin string) (float64, float64, error) {
 	balances, err := c.NewGetAccountService().Do(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("client.NewGetAccountService.Do: %s", err.Error())
+		return 0, 0, fmt.Errorf("client.NewGetAccountService.Do: %s", err.Error())
 	}
 
-	var balance float64 = 0.0
+	var (
+		balance float64 = 0.0
+		locked  float64 = 0.0
+	)
 
 	for _, asset := range balances.Balances {
 		if asset.Asset == coin {
 			balance, err = utils.StringToFloat64(asset.Free)
 			if err != nil {
-				return 0, fmt.Errorf("utils.StringToFloat64: %w", err)
+				return 0, 0, fmt.Errorf("utils.StringToFloat64: %w", err)
+			}
+
+			locked, err = utils.StringToFloat64(asset.Locked)
+			if err != nil {
+				return 0, 0, fmt.Errorf("utils.StringToFloat64: %w", err)
 			}
 
 			break
 		}
 	}
 
-	return balance, nil
+	return balance, locked, nil
 }
 
 func (c *BinanceClient) GetAssets(ctx context.Context) ([]models.Asset, error) {

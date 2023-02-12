@@ -48,6 +48,14 @@ func (c *BybitClient) NewLimitSellOrder(ctx context.Context, symbol string, pric
 	return ErrNotImplemented
 }
 
+func (c *BybitClient) NewMarketBuyOrder(ctx context.Context, symbol string, price, quantity float64) error {
+	return ErrNotImplemented
+}
+
+func (c *BybitClient) NewMarketSellOrder(ctx context.Context, symbol string, price, quantity float64) error {
+	return ErrNotImplemented
+}
+
 func (c *BybitClient) GetAssets(ctx context.Context) ([]models.Asset, error) {
 	return nil, ErrNotImplemented
 }
