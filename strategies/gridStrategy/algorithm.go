@@ -15,13 +15,11 @@ func (s *GridStrategy) Start(ctx context.Context) error {
 	ordersChecksCounter := atomic.NewInt32(0)
 
 	go s.stopLoss(ctx, stopLoss)
-	// go s.checkBalances(ctx)
 	go s.logic(ctx, stopLoss, ordersChecksCounter)
 
 	for {
 		select {
 		case <-time.NewTicker(s.cfg.Interval).C:
-			// go s.checkBalances(ctx)
 			go s.logic(ctx, stopLoss, ordersChecksCounter)
 		case <-time.NewTicker(s.cfg.StopLossUpdatePeriod).C:
 			go s.stopLoss(ctx, stopLoss)
@@ -72,14 +70,14 @@ func (s *GridStrategy) logic(ctx context.Context, stopLoss *atomic.Float64, orde
 	}
 
 	// place buy and sell orders
-	sellLevels, buyLevels := s.generateGridsAndStopLoss(price)
+	sellLevels, buyLevels := s.generateGrids(price)
 	s.placeSellOrders(ctx, sellLevels, price, amount)
 	s.placeBuyOrders(ctx, buyLevels, price, amount)
 
 	ordersChecksCounter.Store(0)
 }
 
-func (s *GridStrategy) generateGridsAndStopLoss(price float64) ([]float64, []float64) {
+func (s *GridStrategy) generateGrids(price float64) ([]float64, []float64) {
 	// calculate the price levels for each grid
 	sellLevels := make([]float64, s.cfg.GridsAmount)
 	buyLevels := make([]float64, s.cfg.GridsAmount)
@@ -160,7 +158,7 @@ func (s *GridStrategy) stopLoss(ctx context.Context, stopLoss *atomic.Float64) {
 		}()
 	}
 
-	stopLossActual := currentPrice * (1 - (1+float64(s.cfg.GridsAmount))*s.cfg.GridSize)
+	stopLossActual := currentPrice * s.cfg.StopLossShare
 	s.z.Infow(
 		"stop loss updated",
 		"previous", stopLoss.Load(),

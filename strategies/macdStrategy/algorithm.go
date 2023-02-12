@@ -51,10 +51,10 @@ func (s *MACDStrategy) logic(ctx context.Context) {
 		)
 	}
 
-	if l := len(klines); l < 36 {
+	if l := len(klines); l < 26 {
 		s.z.Warnw(
 			"not enough klines received",
-			"len", l,
+			"count", l,
 		)
 
 		return

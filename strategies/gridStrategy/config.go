@@ -22,6 +22,7 @@ type Config struct {
 	GridsAmount           uint          `env:"STRATEGIES_GRIDS_AMOUNT"                  envDefault:"3"`       // number of grids to create
 	BaseCoinForAmount     bool          `env:"STRATEGIES_GRIDS_BASE_COIN_FOR_AMOUNT"    envDefault:"false"`   // whether to use base coin for ORDER_AMOUNT
 	OrderAmount           float64       `env:"STRATEGIES_GRIDS_ORDER_AMOUNT"            envDefault:"0.00005"` // quote coin amount for placing order
+	StopLossShare         float64       `env:"STRATEGIES_GRIDS_STOP_LOSS_SHARE"         envDefault:"0.9"`     // stop loss share of actual price
 	StopLossUpdatePeriod  time.Duration `env:"STRATEGIES_GRID_STOP_LOSS_UPDATE_PERIOD"  envDefault:"120m"`    // how often to update stop loss
 	OrdersCheckRetriesMax uint          `env:"STRATEGIES_GRID_ORDERS_CHECK_RETRIES_MAX" envDefault:"3"`       // how many times try to make orders unit replacing
 }
