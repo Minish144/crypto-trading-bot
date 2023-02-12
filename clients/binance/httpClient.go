@@ -266,7 +266,6 @@ func (c *BinanceClient) GetKlines(ctx context.Context, symbol, interval string) 
 	klinesModels := make([]*models.Kline, len(klines))
 
 	for i, kline := range klines {
-		fmt.Printf("%s, ", kline.Close)
 		klinesModels[i], err = KlineToModel(kline)
 		if err != nil {
 			return nil, fmt.Errorf("KlineToModel: %w", err)

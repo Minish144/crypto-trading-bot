@@ -128,7 +128,7 @@ func (dic *DI) Start(ctx context.Context) context.Context {
 		}
 	}
 
-	go dic.Helpers.BinanceHelper.StartLoggingHelpers(ctx)
+	// go dic.Helpers.BinanceHelper.StartLoggingHelpers(ctx)
 
 	for _, strategy := range dic.Strategies {
 		z.Infow("starting strategy", "name", strategy.Name())

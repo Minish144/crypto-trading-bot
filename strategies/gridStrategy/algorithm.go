@@ -10,8 +10,6 @@ import (
 	"go.uber.org/atomic"
 )
 
-const ordersCheckRetriesMax = 3
-
 func (s *GridStrategy) Start(ctx context.Context) error {
 	stopLoss := atomic.NewFloat64(0)
 	ordersChecksCounter := atomic.NewInt32(0)
@@ -41,11 +39,16 @@ func (s *GridStrategy) logic(ctx context.Context, stopLoss *atomic.Float64, orde
 		return
 	}
 
+	amount := s.cfg.OrderAmount
+	if s.cfg.BaseCoinForAmount {
+		amount = utils.QuoteQtyFromBaseQty(price, s.cfg.OrderAmount)
+	}
+
 	// increment checks counter
 	ordersChecksCounter.Inc()
 
 	// close all orders if more checks were performed than expected
-	if ordersChecksCounter.Load() >= ordersCheckRetriesMax {
+	if ordersChecksCounter.Load() >= int32(s.cfg.OrdersCheckRetriesMax) {
 		orders, err := s.client.GetOpenOrders(ctx, s.cfg.Symbol)
 		if err != nil {
 			s.z.Warnw(
@@ -70,8 +73,8 @@ func (s *GridStrategy) logic(ctx context.Context, stopLoss *atomic.Float64, orde
 
 	// place buy and sell orders
 	sellLevels, buyLevels := s.generateGridsAndStopLoss(price)
-	s.placeSellOrders(ctx, sellLevels, price, s.cfg.OrderAmount)
-	s.placeBuyOrders(ctx, buyLevels, price, s.cfg.OrderAmount)
+	s.placeSellOrders(ctx, sellLevels, price, amount)
+	s.placeBuyOrders(ctx, buyLevels, price, amount)
 
 	ordersChecksCounter.Store(0)
 }
@@ -81,7 +84,7 @@ func (s *GridStrategy) generateGridsAndStopLoss(price float64) ([]float64, []flo
 	sellLevels := make([]float64, s.cfg.GridsAmount)
 	buyLevels := make([]float64, s.cfg.GridsAmount)
 
-	for i := 1; i <= s.cfg.GridsAmount; i++ {
+	for i := uint(1); i <= s.cfg.GridsAmount; i++ {
 		sellLevels[i-1] = price * (1 + s.cfg.GridSize + (float64(i) * s.cfg.GridSize))
 		buyLevels[i-1] = price * (1 - (float64(i) * s.cfg.GridSize))
 	}
@@ -97,40 +100,6 @@ func (s *GridStrategy) allOrdersFilled(ctx context.Context) (bool, error) {
 
 	return len(orders) == 0, nil
 }
-
-// func (s *GridStrategy) checkBalances(ctx context.Context) {
-// 	// check the balance of the account
-// 	balance, err := s.client.GetBalance(ctx, s.cfg.Coins.Base)
-// 	if err != nil {
-// 		s.z.Warnw("failed to get balance", "error", err.Error())
-// 		return
-// 	}
-//
-// 	s.z.Infow(
-// 		"balance",
-// 		"coin", s.cfg.Coins.Base,
-// 		"amount", balance,
-// 	)
-//
-// 	balanceQuote, err := s.client.GetBalance(ctx, s.cfg.Coins.Quote)
-// 	if err != nil {
-// 		s.z.Warnw("failed to get balance", "error", err.Error())
-// 		return
-// 	}
-//
-// 	price, err := s.client.GetPrice(ctx, s.cfg.Symbol)
-// 	if err != nil {
-// 		s.z.Warnw("failed to get price", "error", err.Error())
-// 		return
-// 	}
-//
-// 	s.z.Infow(
-// 		"balance",
-// 		"coin", s.cfg.Coins.Quote,
-// 		"amount", balanceQuote,
-// 		"base_equivalent", price*balanceQuote,
-// 	)
-// }
 
 func (s *GridStrategy) closeOrders(ctx context.Context, orders []*models.Order) {
 	for _, order := range orders {

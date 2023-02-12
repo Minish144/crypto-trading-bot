@@ -16,12 +16,14 @@ type Config struct {
 		Quote string
 		Base  string
 	}
-	Interval             time.Duration `env:"STRATEGIES_GRID_INTERVAL"                 envDefault:"5m"`      // polling interval
-	GridSize             float64       `env:"STRATEGIES_GRID_SIZE"                     envDefault:"0.01"`    // share of total funds to use for each grid level
-	GridStep             float64       `env:"STRATEGIES_GRID_STEP"                     envDefault:"0.02"`    // share increase/decrease of the price for each subsequent grid level
-	GridsAmount          int           `env:"STRATEGIES_GRIDS_AMOUNT"                  envDefault:"3"`       // number of grids to create
-	OrderAmount          float64       `env:"STRATEGIES_GRIDS_ORDER_AMOUNT"            envDefault:"0.00005"` // quote coin amount for placing order
-	StopLossUpdatePeriod time.Duration `env:"STRATEGIES_GRID_STOP_LOSS_UPDATE_PERIOD"  envDefault:"120m"`    // how often to update stop loss
+	Interval              time.Duration `env:"STRATEGIES_GRID_INTERVAL"                 envDefault:"5m"`      // polling interval
+	GridSize              float64       `env:"STRATEGIES_GRID_SIZE"                     envDefault:"0.01"`    // share of total funds to use for each grid level
+	GridStep              float64       `env:"STRATEGIES_GRID_STEP"                     envDefault:"0.02"`    // share increase/decrease of the price for each subsequent grid level
+	GridsAmount           uint          `env:"STRATEGIES_GRIDS_AMOUNT"                  envDefault:"3"`       // number of grids to create
+	BaseCoinForAmount     bool          `env:"STRATEGIES_GRIDS_BASE_COIN_FOR_AMOUNT"    envDefault:"false"`   // whether to use base coin for ORDER_AMOUNT
+	OrderAmount           float64       `env:"STRATEGIES_GRIDS_ORDER_AMOUNT"            envDefault:"0.00005"` // quote coin amount for placing order
+	StopLossUpdatePeriod  time.Duration `env:"STRATEGIES_GRID_STOP_LOSS_UPDATE_PERIOD"  envDefault:"120m"`    // how often to update stop loss
+	OrdersCheckRetriesMax uint          `env:"STRATEGIES_GRID_ORDERS_CHECK_RETRIES_MAX" envDefault:"3"`       // how many times try to make orders unit replacing
 }
 
 func NewConfigFromEnv() (*Config, error) {

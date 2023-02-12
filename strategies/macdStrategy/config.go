@@ -17,8 +17,11 @@ type Config struct {
 		Base  string
 	}
 	Interval             time.Duration `env:"STRATEGIES_MACD_INTERVAL"                envDefault:"5m"`      // polling interval
-	StopLossUpdatePeriod time.Duration `env:"STRATEGIES_MACD_STOP_LOSS_UPDATE_PERIOD" envDefault:"120m"`    // how often to update stop loss
+	StopLossUpdatePeriod time.Duration `env:"STRATEGIES_MACD_STOP_LOSS_UPDATE_PERIOD" envDefault:"180m"`    // how often to update stop loss
+	StopLossShare        float64       `env:"STRATEGIES_MACD_STOP_LOSS_SHARE"         envDefault:"0.85"`    // stop loss share of actual price
+	BaseCoinForAmount    bool          `env:"STRATEGIES_MACD_BASE_COIN_FOR_AMOUNT"    envDefault:"false"`   // whether to use base coin for ORDER_AMOUNT
 	OrderAmount          float64       `env:"STRATEGIES_MACD_ORDER_AMOUNT"            envDefault:"0.00005"` // quote coin amount for placing order
+	MaxOrdersAmount      float64       `env:"STRATEGIES_MACD_MAX_ORDERS_AMOUNT"       envDefault:"100"`     // amount available for trading
 	KlinesInterval       string        `env:"STRATEGIES_MACD_KLINES_INTERVAL"         envDefault:"15m"`     // klines interval
 }
 
