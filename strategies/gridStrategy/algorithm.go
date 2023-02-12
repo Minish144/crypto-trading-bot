@@ -212,7 +212,7 @@ func (s *GridStrategy) placeBuyOrders(ctx context.Context, levels []float64, pri
 			ctx,
 			s.cfg.Symbol,
 			utils.RoundPrecision(gridLevel, s.cfg.PricePrecision),
-			quantity*(1+float64(i)*s.cfg.GridStep),
+			utils.RoundPrecision(quantity*(1+float64(i)*s.cfg.GridStep), s.cfg.QuantityPrecision),
 		); err != nil {
 			s.z.Warnw(
 				"failed to place order",

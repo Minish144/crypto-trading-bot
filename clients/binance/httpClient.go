@@ -40,9 +40,9 @@ func (c *BinanceClient) GetPrice(ctx context.Context, symbol string) (float64, e
 		Symbol(symbol).
 		Do(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("client.NewListPricesService.Do: %w", err)
+		return 0, fmt.Errorf("c.NewListPricesService.Do: %w", ParseError(err))
 	} else if len(prices) == 0 {
-		return 0, fmt.Errorf("client.NewListPricesService.Do: empty prices array received")
+		return 0, fmt.Errorf("c.NewListPricesService.Do: empty prices array received")
 	}
 
 	pricef64, err := utils.StringToFloat64(prices[len(prices)-1].Price)
@@ -161,7 +161,7 @@ func (c *BinanceClient) newBinanceOrder(
 
 	_, err := request.Do(ctx)
 	if err != nil {
-		return fmt.Errorf("client.NewCreateOrderService.Do: %v", err)
+		return fmt.Errorf("c.NewCreateOrderService.Do: %v", ParseError(err))
 	}
 
 	return nil
@@ -170,7 +170,7 @@ func (c *BinanceClient) newBinanceOrder(
 func (c *BinanceClient) GetBalance(ctx context.Context, coin string) (float64, float64, error) {
 	balances, err := c.NewGetAccountService().Do(ctx)
 	if err != nil {
-		return 0, 0, fmt.Errorf("client.NewGetAccountService.Do: %s", err.Error())
+		return 0, 0, fmt.Errorf("c.NewGetAccountService.Do: %w", ParseError(err))
 	}
 
 	var (
@@ -200,7 +200,7 @@ func (c *BinanceClient) GetBalance(ctx context.Context, coin string) (float64, f
 func (c *BinanceClient) GetAssets(ctx context.Context) ([]models.Asset, error) {
 	account, err := c.NewGetAccountService().Do(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("client.NewGetAccountService: %s", err.Error())
+		return nil, fmt.Errorf("c.NewGetAccountService.Do: %w", ParseError(err))
 	}
 
 	assets := make([]models.Asset, len(account.Balances))
@@ -230,6 +230,9 @@ func (c *BinanceClient) GetOpenOrders(ctx context.Context, symbol string) ([]*mo
 	binanceOrders, err := c.NewListOpenOrdersService().
 		Symbol(symbol).
 		Do(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("c.NewListOpenOrdersService.Do: %w", ParseError(err))
+	}
 
 	orders := make([]*models.Order, len(binanceOrders))
 
@@ -248,7 +251,7 @@ func (c *BinanceClient) CloseOrder(ctx context.Context, symbol string, orderId i
 		Symbol(symbol).
 		OrderID(orderId).
 		Do(ctx); err != nil {
-		return fmt.Errorf("c.NewCancelOrderService.Do: %w", err)
+		return fmt.Errorf("c.NewCancelOrderService.Do: %w", ParseError(err))
 	}
 
 	return nil
@@ -260,7 +263,7 @@ func (c *BinanceClient) GetKlines(ctx context.Context, symbol, interval string) 
 		Interval(interval).
 		Do(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("c.NewKlinesService.Do: %w", err)
+		return nil, fmt.Errorf("c.NewKlinesService.Do: %w", ParseError(err))
 	}
 
 	klinesModels := make([]*models.Kline, len(klines))
@@ -281,7 +284,7 @@ func (c *BinanceClient) GetKlinesCloses(ctx context.Context, symbol, interval st
 		Interval(interval).
 		Do(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("c.NewKlinesService.Do: %w", err)
+		return nil, fmt.Errorf("c.NewKlinesService.Do: %w", ParseError(err))
 	}
 
 	closes := make([]float64, len(klines))
