@@ -63,9 +63,9 @@ func (s *MACDStrategy) logic(ctx context.Context) {
 	signal, price, macd, signalEMA := s.getSignal(klines)
 	price = utils.RoundPrecision(price, s.cfg.PricePrecision)
 
-	amount := s.cfg.OrderAmount
+	amount := utils.RoundPrecision(s.cfg.OrderAmount, s.cfg.QuantityPrecision)
 	if s.cfg.BaseCoinForAmount {
-		amount = utils.QuoteQtyFromBaseQty(price, s.cfg.OrderAmount)
+		amount = utils.RoundPrecision(utils.QuoteQtyFromBaseQty(price, s.cfg.OrderAmount), s.cfg.QuantityPrecision)
 	}
 
 	s.z.Infow(

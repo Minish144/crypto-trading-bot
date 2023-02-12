@@ -25,5 +25,6 @@ func IntToString(i int) string {
 }
 
 func RoundPrecision(f float64, precision uint) float64 {
-	return math.Round(f*float64(10*precision)) / float64(10*precision)
+	ratio := math.Pow(10, float64(precision))
+	return math.Round(f*ratio) / ratio
 }
