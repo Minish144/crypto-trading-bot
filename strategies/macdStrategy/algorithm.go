@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/MicahParks/go-ma"
 	"github.com/Minish144/crypto-trading-bot/models"
 	"github.com/Minish144/crypto-trading-bot/utils"
+	"github.com/cinar/indicator"
 	"go.uber.org/atomic"
 )
 
@@ -60,8 +60,8 @@ func (s *MACDStrategy) logic(ctx context.Context) {
 		return
 	}
 
-	signal, price, macd, signalEMA := s.getSignal(klines)
-	price = utils.RoundPrecision(price, s.cfg.PricePrecision)
+	signal, macd := s.getSignal(klines)
+	price := utils.RoundPrecision(klines[len(klines)-1], s.cfg.PricePrecision)
 
 	amount := utils.RoundPrecision(s.cfg.OrderAmount, s.cfg.QuantityPrecision)
 	if s.cfg.BaseCoinForAmount {
@@ -73,7 +73,6 @@ func (s *MACDStrategy) logic(ctx context.Context) {
 		"signal", signal,
 		"price", price,
 		"MACD", macd,
-		"signal_EMA", signalEMA,
 	)
 
 	if signal == signalBuy {
@@ -130,22 +129,21 @@ func (s *MACDStrategy) logic(ctx context.Context) {
 	}
 }
 
-func (s *MACDStrategy) getSignal(klines []float64) (signal, float64, float64, float64) {
-	macdSignal := ma.DefaultMACDSignal(klines[:ma.RequiredSamplesForDefaultMACDSignal])
+func (s *MACDStrategy) getSignal(klines []float64) (signal, float64) {
+	macdValues, signalValues := indicator.Macd(klines)
 
-	price := klines[len(klines)-1]
-	signal := signalDoNothing
+	latestIndex := len(macdValues) - 1
 
-	results := macdSignal.Calculate(price)
-	if results.BuySignal != nil {
-		if *results.BuySignal {
-			signal = signalBuy
-		} else {
-			signal = signalSell
-		}
+	macd := macdValues[latestIndex]
+	signalLatest := signalValues[latestIndex]
+
+	if macd > signalLatest {
+		return signalBuy, macd
+	} else if macd < signalLatest {
+		return signalSell, macd
+	} else {
+		return signalDoNothing, macd
 	}
-
-	return signal, price, results.MACD.Result, results.SignalEMA
 }
 
 func (s *MACDStrategy) isBuyAllowedByLimit(ctx context.Context, price, qty float64) (bool, error) {
