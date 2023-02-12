@@ -3,6 +3,7 @@ package binance
 import (
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 var pattern = regexp.MustCompile(`msg=(.*).$`)
@@ -17,5 +18,12 @@ func ParseError(err error) error {
 		return err
 	}
 
-	return fmt.Errorf(parsedErrors[l-1])
+	e := parsedErrors[len(parsedErrors)-1]
+	if len(e) == 0 {
+		return fmt.Errorf(e)
+	}
+
+	e = strings.ToLower(e[:1]) + e[1:]
+
+	return fmt.Errorf(e)
 }
