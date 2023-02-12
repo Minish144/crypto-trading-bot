@@ -35,6 +35,7 @@ func (c *BybitClient) NewOrder(
 	symbol string,
 	sideType models.SideType,
 	orderType models.OrderType,
+	tif models.TimeInForceType,
 	price, quantity float64,
 ) error {
 	return ErrNotImplemented
@@ -48,11 +49,11 @@ func (c *BybitClient) NewLimitSellOrder(ctx context.Context, symbol string, pric
 	return ErrNotImplemented
 }
 
-func (c *BybitClient) NewMarketBuyOrder(ctx context.Context, symbol string, price, quantity float64) error {
+func (c *BybitClient) NewMarketBuyOrder(ctx context.Context, symbol string, quantity float64) error {
 	return ErrNotImplemented
 }
 
-func (c *BybitClient) NewMarketSellOrder(ctx context.Context, symbol string, price, quantity float64) error {
+func (c *BybitClient) NewMarketSellOrder(ctx context.Context, symbol string, quantity float64) error {
 	return ErrNotImplemented
 }
 

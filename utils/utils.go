@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 )
 
@@ -21,4 +22,8 @@ func Float64ToString(f float64, precision int) string {
 
 func IntToString(i int) string {
 	return fmt.Sprintf("%d", i)
+}
+
+func RoundPrecision(f float64, precision uint) float64 {
+	return math.Round(f*float64(10*precision)) / float64(10*precision)
 }

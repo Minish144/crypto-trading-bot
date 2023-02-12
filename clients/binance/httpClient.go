@@ -9,9 +9,10 @@ import (
 	gobinance "github.com/adshao/go-binance/v2"
 )
 
-const defaultRecWindow int64 = 5000
-
-var defaultRecWindowOption = gobinance.WithRecvWindow(defaultRecWindow)
+const (
+	pricePrecision    int = 6
+	quantityPrecision     = 8
+)
 
 type BinanceClient struct {
 	*gobinance.Client
@@ -57,16 +58,22 @@ func (c *BinanceClient) NewOrder(
 	symbol string,
 	sideType models.SideType,
 	orderType models.OrderType,
+	tif models.TimeInForceType,
 	price, quantity float64,
 ) error {
 	side, ok := stFromModels[sideType]
 	if !ok {
-		return fmt.Errorf("failed to convert field to binance-type field")
+		return fmt.Errorf("failed to convert side to binance-type field")
 	}
 
 	oType, ok := otFromModels[orderType]
 	if !ok {
-		return fmt.Errorf("failed to convert field to binance-type field")
+		return fmt.Errorf("failed to convert orderType to binance-type field")
+	}
+
+	tifType, ok := tiftFromModels[tif]
+	if !ok {
+		return fmt.Errorf("failed to convert timeInForce to binance-type field")
 	}
 
 	return c.newBinanceOrder(
@@ -74,6 +81,7 @@ func (c *BinanceClient) NewOrder(
 		symbol,
 		side,
 		oType,
+		tifType,
 		price,
 		quantity,
 	)
@@ -85,6 +93,7 @@ func (c *BinanceClient) NewLimitBuyOrder(ctx context.Context, symbol string, pri
 		symbol,
 		gobinance.SideTypeBuy,
 		gobinance.OrderTypeLimit,
+		gobinance.TimeInForceTypeGTC,
 		price,
 		quantity,
 	)
@@ -101,58 +110,56 @@ func (c *BinanceClient) NewLimitSellOrder(
 		symbol,
 		gobinance.SideTypeSell,
 		gobinance.OrderTypeLimit,
+		gobinance.TimeInForceTypeFOK,
 		price,
 		quantity,
 	)
 }
 
-func (c *BinanceClient) NewMarketBuyOrder(ctx context.Context, symbol string, price, quantity float64) error {
+func (c *BinanceClient) NewMarketBuyOrder(ctx context.Context, symbol string, quantity float64) error {
 	return c.newBinanceOrder(
 		ctx,
 		symbol,
 		gobinance.SideTypeBuy,
 		gobinance.OrderTypeMarket,
-		price,
+		gobinance.TimeInForceTypeFOK,
+		0,
 		quantity,
 	)
 }
 
-func (c *BinanceClient) NewMarketSellOrder(
-	ctx context.Context,
-	symbol string,
-	price,
-	quantity float64,
-) error {
+func (c *BinanceClient) NewMarketSellOrder(ctx context.Context, symbol string, quantity float64) error {
 	return c.newBinanceOrder(
 		ctx,
 		symbol,
 		gobinance.SideTypeSell,
 		gobinance.OrderTypeMarket,
-		price,
+		gobinance.TimeInForceTypeFOK,
+		0,
 		quantity,
 	)
 }
-
-const (
-	pricePrecision    int = 5
-	quantityPrecision     = 8
-)
 
 func (c *BinanceClient) newBinanceOrder(
 	ctx context.Context,
 	symbol string,
 	sideType gobinance.SideType,
 	orderType gobinance.OrderType,
+	tif gobinance.TimeInForceType,
 	price, quantity float64,
 ) error {
-	_, err := c.NewCreateOrderService().
+	request := c.NewCreateOrderService().
 		Symbol(symbol).
 		Side(sideType).
 		Type(orderType).
-		Price(utils.Float64ToString(price, pricePrecision)).
-		Quantity(utils.Float64ToString(quantity, quantityPrecision)).
-		TimeInForce(gobinance.TimeInForceTypeGTC).
-		Do(ctx)
+		Quantity(utils.Float64ToString(quantity, quantityPrecision))
+
+	if orderType != gobinance.OrderTypeMarket {
+		request = request.Price(utils.Float64ToString(price, pricePrecision))
+		request = request.TimeInForce(tif)
+	}
+
+	_, err := request.Do(ctx)
 	if err != nil {
 		return fmt.Errorf("client.NewCreateOrderService.Do: %v", err)
 	}

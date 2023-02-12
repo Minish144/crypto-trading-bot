@@ -9,8 +9,10 @@ import (
 )
 
 type Config struct {
-	Symbol string `env:"STRATEGIES_GRID_SYMBOL"   envDefault:"BTCUSDT"` // trading pair symbol
-	Coins  struct {
+	Symbol            string `env:"STRATEGIES_GRID_SYMBOL"          envDefault:"BTCUSDT"` // trading pair symbol
+	PricePrecision    uint   `env:"STRATEGIES_GRID_PRICE_PRECISION" envDefault:"3"`       // price float64 precision
+	QuantityPrecision uint   `env:"STRATEGIES_GRID_QTY_PRECISION"   envDefault:"3"`       // quantity float64 precision
+	Coins             struct {
 		Quote string
 		Base  string
 	}
@@ -46,6 +48,8 @@ func NewConfigFromEnv() (*Config, error) {
 	cfg.Symbol = sym
 	cfg.Coins.Quote = quote
 	cfg.Coins.Base = base
+
+	cfg.OrderAmount = utils.RoundPrecision(cfg.OrderAmount, cfg.QuantityPrecision)
 
 	return cfg, nil
 }

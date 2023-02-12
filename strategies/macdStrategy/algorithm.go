@@ -2,10 +2,10 @@ package macdStrategy
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/MicahParks/go-ma"
+	"github.com/Minish144/crypto-trading-bot/utils"
 )
 
 func (s *MACDStrategy) Start(ctx context.Context) error {
@@ -21,18 +21,20 @@ func (s *MACDStrategy) Start(ctx context.Context) error {
 	}
 }
 
-type signal int
+type signal string
 
 const (
-	signalBuy       signal = 1
-	signalSell      signal = 2
-	signalDoNothing signal = 3
+	signalBuy       signal = "buy"
+	signalSell      signal = "sell"
+	signalDoNothing signal = "do-nothing"
 )
 
 func (s *MACDStrategy) logic(ctx context.Context) {
-	t1 := time.Now()
-
-	klines, err := s.client.GetKlinesCloses(ctx, s.cfg.Symbol, s.cfg.KlinesInterval)
+	klines, err := s.client.GetKlinesCloses(
+		ctx,
+		s.cfg.Symbol,
+		s.cfg.KlinesInterval,
+	)
 	if err != nil {
 		s.z.Warnw(
 			"failed to get klines",
@@ -50,38 +52,47 @@ func (s *MACDStrategy) logic(ctx context.Context) {
 	}
 
 	signal, price, macd, signalEMA := s.getSignal(klines)
-
-	if signal == signalBuy {
-		s.z.Infow(
-			"new signal",
-			"signal", "buy",
-			"price", price,
-			"MACD", macd,
-			"signal_EMA", signalEMA,
-		)
-	} else if signal == signalSell {
-		s.z.Infow(
-			"new signal",
-			"signal", "sell",
-			"price", price,
-			"price", price,
-			"MACD", macd,
-			"signal_EMA", signalEMA,
-		)
-	}
+	price = utils.RoundPrecision(price, s.cfg.PricePrecision)
 
 	s.z.Infow(
 		"new signal",
-		"signal", "do nothing",
-		"price", price,
+		"signal", signal,
 		"price", price,
 		"MACD", macd,
 		"signal_EMA", signalEMA,
 	)
 
-	t2 := time.Now()
+	if signal == signalBuy {
+		if err := s.client.NewMarketBuyOrder(
+			ctx,
+			s.cfg.Symbol,
+			s.cfg.OrderAmount,
+		); err != nil {
+			s.z.Warnw(
+				"failed to place order",
+				"side", "buy",
+				"type", "market",
+				"price", price,
+				"quantity", s.cfg.OrderAmount,
+				"error", err.Error(),
+			)
 
-	fmt.Println("execution time", t2.Sub(t1).Round(time.Millisecond))
+			return
+		}
+	} else if signal == signalSell {
+		if err := s.client.NewMarketSellOrder(ctx, s.cfg.Symbol, s.cfg.OrderAmount); err != nil {
+			s.z.Warnw(
+				"failed to place order",
+				"side", "sell",
+				"type", "market",
+				"price", price,
+				"quantity", s.cfg.OrderAmount,
+				"error", err.Error(),
+			)
+
+			return
+		}
+	}
 }
 
 func (s *MACDStrategy) getSignal(klines []float64) (signal, float64, float64, float64) {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Minish144/crypto-trading-bot/models"
+	"github.com/Minish144/crypto-trading-bot/utils"
 	"go.uber.org/atomic"
 )
 
@@ -204,14 +205,19 @@ func (s *GridStrategy) placeSellOrders(ctx context.Context, levels []float64, pr
 	// placing sell orders at each grid level
 	for i, gridLevel := range levels {
 		// calculate the size of the order
-		if err := s.client.NewLimitSellOrder(ctx, s.cfg.Symbol, gridLevel, quantity*(1+float64(i)*s.cfg.GridStep)); err != nil {
+		if err := s.client.NewLimitSellOrder(
+			ctx,
+			s.cfg.Symbol,
+			utils.RoundPrecision(gridLevel, s.cfg.PricePrecision),
+			utils.RoundPrecision(quantity*(1+float64(i)*s.cfg.GridStep), s.cfg.QuantityPrecision),
+		); err != nil {
 			s.z.Warnw(
 				"failed to place order",
 				"side", "sell",
 				"type", "limit",
 				"multiplier", (1 + s.cfg.GridSize + (float64(i) * s.cfg.GridSize)),
-				"price", gridLevel,
-				"quantity", quantity*(1+float64(i)*s.cfg.GridStep),
+				"price", utils.RoundPrecision(gridLevel, s.cfg.PricePrecision),
+				"quantity", utils.RoundPrecision(quantity*(1+float64(i)*s.cfg.GridStep), s.cfg.QuantityPrecision),
 				"error", err.Error(),
 			)
 
@@ -223,8 +229,8 @@ func (s *GridStrategy) placeSellOrders(ctx context.Context, levels []float64, pr
 			"side", "sell",
 			"type", "limit",
 			"multiplier", (1 + s.cfg.GridSize + (float64(i) * s.cfg.GridSize)),
-			"price", gridLevel,
-			"quantity", quantity*(1+float64(i)*s.cfg.GridStep),
+			"price", utils.RoundPrecision(gridLevel, s.cfg.PricePrecision),
+			"quantity", utils.RoundPrecision(quantity*(1+float64(i)*s.cfg.GridStep), s.cfg.QuantityPrecision),
 		)
 	}
 }
@@ -233,14 +239,19 @@ func (s *GridStrategy) placeBuyOrders(ctx context.Context, levels []float64, pri
 	// placing buy orders at each grid level
 	for i, gridLevel := range levels {
 		// calculate the size of the order
-		if err := s.client.NewLimitBuyOrder(ctx, s.cfg.Symbol, gridLevel, quantity*(1+float64(i)*s.cfg.GridStep)); err != nil {
+		if err := s.client.NewLimitBuyOrder(
+			ctx,
+			s.cfg.Symbol,
+			utils.RoundPrecision(gridLevel, s.cfg.PricePrecision),
+			quantity*(1+float64(i)*s.cfg.GridStep),
+		); err != nil {
 			s.z.Warnw(
 				"failed to place order",
 				"side", "buy",
 				"type", "limit",
 				"multiplier", (1 - (float64(i) * s.cfg.GridSize)),
-				"price", gridLevel,
-				"quantity", quantity*(1+float64(i)*s.cfg.GridStep),
+				"price", utils.RoundPrecision(gridLevel, s.cfg.PricePrecision),
+				"quantity", utils.RoundPrecision(quantity*(1+float64(i)*s.cfg.GridStep), s.cfg.QuantityPrecision),
 				"error", err.Error(),
 			)
 
@@ -252,8 +263,8 @@ func (s *GridStrategy) placeBuyOrders(ctx context.Context, levels []float64, pri
 			"side", "buy",
 			"type", "limit",
 			"multiplier", (1 - (float64(i) * s.cfg.GridSize)),
-			"price", gridLevel,
-			"quantity", quantity*(1+float64(i)*s.cfg.GridStep),
+			"price", utils.RoundPrecision(gridLevel, s.cfg.PricePrecision),
+			"quantity", utils.RoundPrecision(quantity*(1+float64(i)*s.cfg.GridStep), s.cfg.QuantityPrecision),
 		)
 	}
 }
