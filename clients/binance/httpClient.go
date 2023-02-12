@@ -110,7 +110,7 @@ func (c *BinanceClient) NewLimitSellOrder(
 		symbol,
 		gobinance.SideTypeSell,
 		gobinance.OrderTypeLimit,
-		gobinance.TimeInForceTypeFOK,
+		gobinance.TimeInForceTypeGTC,
 		price,
 		quantity,
 	)
