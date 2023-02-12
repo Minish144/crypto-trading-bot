@@ -137,10 +137,12 @@ func (s *MACDStrategy) getSignal(klines []float64) (signal, float64, float64, fl
 	signal := signalDoNothing
 
 	results := macdSignal.Calculate(price)
-	if results.BuySignal != nil && *results.BuySignal {
-		signal = signalBuy
-	} else {
-		signal = signalSell
+	if results.BuySignal != nil {
+		if *results.BuySignal {
+			signal = signalBuy
+		} else {
+			signal = signalSell
+		}
 	}
 
 	return signal, price, results.MACD.Result, results.SignalEMA
