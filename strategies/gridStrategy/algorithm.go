@@ -16,13 +16,13 @@ func (s *GridStrategy) Start(ctx context.Context) error {
 	ordersChecksCounter := atomic.NewInt32(0)
 
 	go s.stopLoss(ctx, stopLoss)
-	go s.checkBalances(ctx)
+	// go s.checkBalances(ctx)
 	go s.logic(ctx, stopLoss, ordersChecksCounter)
 
 	for {
 		select {
 		case <-time.NewTicker(s.cfg.Interval).C:
-			go s.checkBalances(ctx)
+			// go s.checkBalances(ctx)
 			go s.logic(ctx, stopLoss, ordersChecksCounter)
 		case <-time.NewTicker(s.cfg.StopLossUpdatePeriod).C:
 			go s.stopLoss(ctx, stopLoss)
@@ -97,39 +97,39 @@ func (s *GridStrategy) allOrdersFilled(ctx context.Context) (bool, error) {
 	return len(orders) == 0, nil
 }
 
-func (s *GridStrategy) checkBalances(ctx context.Context) {
-	// check the balance of the account
-	balance, err := s.client.GetBalance(ctx, s.cfg.Coins.Base)
-	if err != nil {
-		s.z.Warnw("failed to get balance", "error", err.Error())
-		return
-	}
-
-	s.z.Infow(
-		"balance",
-		"coin", s.cfg.Coins.Base,
-		"amount", balance,
-	)
-
-	balanceQuote, err := s.client.GetBalance(ctx, s.cfg.Coins.Quote)
-	if err != nil {
-		s.z.Warnw("failed to get balance", "error", err.Error())
-		return
-	}
-
-	price, err := s.client.GetPrice(ctx, s.cfg.Symbol)
-	if err != nil {
-		s.z.Warnw("failed to get price", "error", err.Error())
-		return
-	}
-
-	s.z.Infow(
-		"balance",
-		"coin", s.cfg.Coins.Quote,
-		"amount", balanceQuote,
-		"base_equivalent", price*balanceQuote,
-	)
-}
+// func (s *GridStrategy) checkBalances(ctx context.Context) {
+// 	// check the balance of the account
+// 	balance, err := s.client.GetBalance(ctx, s.cfg.Coins.Base)
+// 	if err != nil {
+// 		s.z.Warnw("failed to get balance", "error", err.Error())
+// 		return
+// 	}
+//
+// 	s.z.Infow(
+// 		"balance",
+// 		"coin", s.cfg.Coins.Base,
+// 		"amount", balance,
+// 	)
+//
+// 	balanceQuote, err := s.client.GetBalance(ctx, s.cfg.Coins.Quote)
+// 	if err != nil {
+// 		s.z.Warnw("failed to get balance", "error", err.Error())
+// 		return
+// 	}
+//
+// 	price, err := s.client.GetPrice(ctx, s.cfg.Symbol)
+// 	if err != nil {
+// 		s.z.Warnw("failed to get price", "error", err.Error())
+// 		return
+// 	}
+//
+// 	s.z.Infow(
+// 		"balance",
+// 		"coin", s.cfg.Coins.Quote,
+// 		"amount", balanceQuote,
+// 		"base_equivalent", price*balanceQuote,
+// 	)
+// }
 
 func (s *GridStrategy) closeOrders(ctx context.Context, orders []*models.Order) {
 	for _, order := range orders {
@@ -174,10 +174,10 @@ func (s *GridStrategy) stopLoss(ctx context.Context, stopLoss *atomic.Float64) {
 			return
 		}
 
-		go s.closeOrders(ctx, orders)
+		s.closeOrders(ctx, orders)
 
 		go func() {
-			balance, err := s.client.GetBalance(ctx, s.cfg.Coins.Quote)
+			balance, _, err := s.client.GetBalance(ctx, s.cfg.Coins.Quote)
 			if err != nil {
 				s.z.Warnw(
 					"failed to get balance for stop loss",

@@ -26,8 +26,8 @@ func (c *BybitClient) GetPrice(ctx context.Context, symbol string) (float64, err
 	return 0, ErrNotImplemented
 }
 
-func (c *BybitClient) GetBalance(ctx context.Context, coin string) (float64, error) {
-	return 0, ErrNotImplemented
+func (c *BybitClient) GetBalance(ctx context.Context, coin string) (float64, float64, error) {
+	return 0, 0, ErrNotImplemented
 }
 
 func (c *BybitClient) NewOrder(

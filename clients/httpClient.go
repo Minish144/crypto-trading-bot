@@ -9,7 +9,7 @@ import (
 type HttpClient interface {
 	Ping(ctx context.Context) error
 	GetPrice(ctx context.Context, symbol string) (float64, error)
-	GetBalance(ctx context.Context, coin string) (float64, error)
+	GetBalance(ctx context.Context, coin string) (float64, float64, error)
 	GetAssets(ctx context.Context) ([]models.Asset, error)
 	GetKlines(ctx context.Context, symbol, interval string) ([]*models.Kline, error)
 	GetKlinesCloses(ctx context.Context, symbol, interval string) ([]float64, error)
