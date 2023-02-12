@@ -12,6 +12,7 @@ import (
 	"github.com/Minish144/crypto-trading-bot/logger"
 	"github.com/Minish144/crypto-trading-bot/strategies"
 	"github.com/Minish144/crypto-trading-bot/strategies/gridStrategy"
+	"github.com/Minish144/crypto-trading-bot/strategies/macdStrategy"
 	"go.uber.org/zap"
 )
 
@@ -71,20 +72,37 @@ func NewDI() (*DI, error) {
 		dic.Exchanges.Binance.HttpClient = binance.NewBinanceClient(bCfg, cfg.Test)
 	}
 
-	gridStrategyCfg, err := gridStrategy.NewConfigFromEnv()
-	if err != nil {
-		return nil, fmt.Errorf("gridStrategy.NewConfigFromEnv: %w", err)
-	}
-
 	dic.Helpers.BinanceHelper = helpers.NewHelper(dic.Exchanges.Binance.HttpClient, dic.Config.BaseCoin)
 
-	dic.Strategies = append(
-		dic.Strategies,
-		strategies.NewGridStrategy(
-			dic.Exchanges.Binance.HttpClient,
-			gridStrategyCfg,
-		),
-	)
+	if dic.Config.StrategiesEnables.Grid {
+		gridStrategyCfg, err := gridStrategy.NewConfigFromEnv()
+		if err != nil {
+			return nil, fmt.Errorf("gridStrategy.NewConfigFromEnv: %w", err)
+		}
+
+		dic.Strategies = append(
+			dic.Strategies,
+			strategies.NewGridStrategy(
+				dic.Exchanges.Binance.HttpClient,
+				gridStrategyCfg,
+			),
+		)
+	}
+
+	if dic.Config.StrategiesEnables.MACD {
+		macdStrategyCfg, err := macdStrategy.NewConfigFromEnv()
+		if err != nil {
+			return nil, fmt.Errorf("macdStrategy.NewConfigFromEnv: %w", err)
+		}
+
+		dic.Strategies = append(
+			dic.Strategies,
+			strategies.NewMACDStrategy(
+				dic.Exchanges.Binance.HttpClient,
+				macdStrategyCfg,
+			),
+		)
+	}
 
 	return dic, nil
 }

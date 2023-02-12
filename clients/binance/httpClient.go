@@ -24,7 +24,6 @@ func NewBinanceClient(c *Config, test bool) *BinanceClient {
 		gobinance.UseTestnet = true
 		client.Client = gobinance.NewClient(c.TestKey, c.TestSecret)
 	} else {
-		fmt.Println(c.Key, c.Secret)
 		client.Client = gobinance.NewClient(c.Key, c.Secret)
 	}
 
@@ -206,12 +205,10 @@ func (c *BinanceClient) CloseOrder(ctx context.Context, symbol string, orderId i
 	return nil
 }
 
-func (c *BinanceClient) GetKlines(ctx context.Context, symbol string, interval models.Interval) ([]*models.Kline, error) {
-	intervalBinance := intervalFromModels[interval]
-
+func (c *BinanceClient) GetKlines(ctx context.Context, symbol, interval string) ([]*models.Kline, error) {
 	klines, err := c.NewKlinesService().
 		Symbol(symbol).
-		Interval(string(intervalBinance)).
+		Interval(interval).
 		Do(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("c.NewKlinesService.Do: %w", err)
@@ -220,6 +217,7 @@ func (c *BinanceClient) GetKlines(ctx context.Context, symbol string, interval m
 	klinesModels := make([]*models.Kline, len(klines))
 
 	for i, kline := range klines {
+		fmt.Printf("%s, ", kline.Close)
 		klinesModels[i], err = KlineToModel(kline)
 		if err != nil {
 			return nil, fmt.Errorf("KlineToModel: %w", err)
@@ -227,4 +225,27 @@ func (c *BinanceClient) GetKlines(ctx context.Context, symbol string, interval m
 	}
 
 	return klinesModels, nil
+}
+
+func (c *BinanceClient) GetKlinesCloses(ctx context.Context, symbol, interval string) ([]float64, error) {
+	klines, err := c.NewKlinesService().
+		Symbol(symbol).
+		Interval(interval).
+		Do(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("c.NewKlinesService.Do: %w", err)
+	}
+
+	closes := make([]float64, len(klines))
+
+	for i, klines := range klines {
+		closeF64, err := utils.StringToFloat64(klines.Close)
+		if err != nil {
+			return nil, fmt.Errorf("utils.StringToFloat64: %w", err)
+		}
+
+		closes[i] = closeF64
+	}
+
+	return closes, nil
 }

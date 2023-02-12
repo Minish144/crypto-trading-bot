@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	github.com/MicahParks/go-ma v0.1.3 // indirect
 	github.com/adshao/go-binance/v2 v2.4.1 // indirect
 	github.com/bitly/go-simplejson v0.5.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect

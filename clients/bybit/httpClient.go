@@ -60,6 +60,10 @@ func (c *BybitClient) CloseOrder(ctx context.Context, symbol string, orderId int
 	return ErrNotImplemented
 }
 
-func (c *BybitClient) GetKlines(ctx context.Context, symbol string, interval models.Interval) ([]*models.Kline, error) {
+func (c *BybitClient) GetKlines(ctx context.Context, symbol, interval string) ([]*models.Kline, error) {
+	return nil, ErrNotImplemented
+}
+
+func (c *BybitClient) GetKlinesCloses(ctx context.Context, symbol, interval string) ([]float64, error) {
 	return nil, ErrNotImplemented
 }

@@ -17,6 +17,7 @@ type Config struct {
 	Interval             time.Duration `env:"STRATEGIES_MACD_INTERVAL"                envDefault:"5m"`      // polling interval
 	StopLossUpdatePeriod time.Duration `env:"STRATEGIES_MACD_STOP_LOSS_UPDATE_PERIOD" envDefault:"120m"`    // how often to update stop loss
 	OrderAmount          float64       `env:"STRATEGIES_MACD_ORDER_AMOUNT"            envDefault:"0.00005"` // quote coin amount for placing order
+	KlinesInterval       string        `env:"STRATEGIES_MACD_KLINES_INTERVAL"         envDefault:"15m"`     // klines interval
 }
 
 func NewConfigFromEnv() (*Config, error) {

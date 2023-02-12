@@ -40,9 +40,6 @@ func (s *GridStrategy) logic(ctx context.Context, stopLoss *atomic.Float64, orde
 		return
 	}
 
-	// set stoploss
-	go s.stopLoss(ctx, stopLoss)
-
 	// increment checks counter
 	ordersChecksCounter.Inc()
 
