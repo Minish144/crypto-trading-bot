@@ -99,6 +99,8 @@ func (s *MACDStrategy) logic(ctx context.Context) {
 				"quantity", amount,
 				"error", "buy limit had been reached",
 			)
+
+			return
 		}
 
 		if err := s.client.NewMarketBuyOrder(ctx, s.cfg.Symbol, amount); err != nil {
