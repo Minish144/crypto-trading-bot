@@ -4,38 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Minish144/crypto-trading-bot/clients"
 	"github.com/Minish144/crypto-trading-bot/clients/binance"
-	"github.com/Minish144/crypto-trading-bot/clients/bybit"
 	"github.com/Minish144/crypto-trading-bot/config"
-	"github.com/Minish144/crypto-trading-bot/helpers"
 	"github.com/Minish144/crypto-trading-bot/logger"
-	"github.com/Minish144/crypto-trading-bot/strategies"
-	"github.com/Minish144/crypto-trading-bot/strategies/gridStrategy"
-	"github.com/Minish144/crypto-trading-bot/strategies/macdStrategy"
+	"github.com/thecolngroup/alphakit/broker"
 	"go.uber.org/zap"
 )
 
 type DI struct {
 	Config *config.Config
 
-	Exchanges struct {
-		Bybit struct {
-			Config     *bybit.Config
-			HttpClient clients.HttpClient
-		}
-
-		Binance struct {
-			Config     *binance.Config
-			HttpClient clients.HttpClient
-		}
-	}
-
-	Helpers struct {
-		BinanceHelper *helpers.Helper
-	}
-
-	Strategies []strategies.Strategy
+	BinanceDealer broker.Dealer
 }
 
 func NewDI() (*DI, error) {
@@ -52,57 +31,14 @@ func NewDI() (*DI, error) {
 		return nil, fmt.Errorf("logger.NewLogger: %w", err)
 	}
 
-	if cfg.ExchangesEnables.Bybit {
-		bbCfg, err := bybit.NewBybitConfig()
-		if err != nil {
-			return nil, fmt.Errorf("bybit.NewBybitConfig: %w", err)
-		}
+	z := zap.S().With("context", "di.NewDI")
 
-		dic.Exchanges.Bybit.Config = bbCfg
-		dic.Exchanges.Bybit.HttpClient = bybit.NewBybitClient(bbCfg, cfg.Test)
+	dealer, err := binance.New(nil)
+	if err != nil {
+		z.Fatalw("binance new", "error", err.Error())
 	}
 
-	if cfg.ExchangesEnables.Binance {
-		bCfg, err := binance.NewBinanceConfig()
-		if err != nil {
-			return nil, fmt.Errorf("bybit.NewBinanceConfig: %w", err)
-		}
-
-		dic.Exchanges.Binance.Config = bCfg
-		dic.Exchanges.Binance.HttpClient = binance.NewBinanceClient(bCfg, cfg.Test)
-	}
-
-	dic.Helpers.BinanceHelper = helpers.NewHelper(dic.Exchanges.Binance.HttpClient, dic.Config.BaseCoin)
-
-	if dic.Config.StrategiesEnables.Grid {
-		gridStrategyCfg, err := gridStrategy.NewConfigFromEnv()
-		if err != nil {
-			return nil, fmt.Errorf("gridStrategy.NewConfigFromEnv: %w", err)
-		}
-
-		dic.Strategies = append(
-			dic.Strategies,
-			strategies.NewGridStrategy(
-				dic.Exchanges.Binance.HttpClient,
-				gridStrategyCfg,
-			),
-		)
-	}
-
-	if dic.Config.StrategiesEnables.MACD {
-		macdStrategyCfg, err := macdStrategy.NewConfigFromEnv()
-		if err != nil {
-			return nil, fmt.Errorf("macdStrategy.NewConfigFromEnv: %w", err)
-		}
-
-		dic.Strategies = append(
-			dic.Strategies,
-			strategies.NewMACDStrategy(
-				dic.Exchanges.Binance.HttpClient,
-				macdStrategyCfg,
-			),
-		)
-	}
+	dic.BinanceDealer = dealer
 
 	return dic, nil
 }
@@ -110,30 +46,17 @@ func NewDI() (*DI, error) {
 func (dic *DI) Start(ctx context.Context) context.Context {
 	z := zap.S().With("context", "di.Start")
 
-	if dic.Config.ExchangesEnables.Bybit {
-		if err := dic.Exchanges.Bybit.HttpClient.Ping(ctx); err != nil {
-			z.Fatalw(
-				"failed to ping bybit",
-				"error", err.Error(),
-			)
-		}
-	}
+	z.Infow("starting service")
 
-	if dic.Config.ExchangesEnables.Binance {
-		if err := dic.Exchanges.Binance.HttpClient.Ping(ctx); err != nil {
-			z.Fatalw(
-				"failed to ping binance",
-				"error", err.Error(),
-			)
-		}
-	}
+	// fmt.Println(dic.BinanceDealer.PlaceOrder(ctx, broker.Order{
+	// 	Asset:      market.Asset{Symbol: "BTCUSDT"},
+	// 	Side:       broker.Sell,
+	// 	Type:       broker.Limit,
+	// 	Size:       decimal.NewFromFloat(0.01),
+	// 	LimitPrice: decimal.NewFromFloat(24000.41),
+	// }))
 
-	// go dic.Helpers.BinanceHelper.StartLoggingHelpers(ctx)
-
-	for _, strategy := range dic.Strategies {
-		z.Infow("starting strategy", "name", strategy.Name())
-		go strategy.Start(ctx)
-	}
+	fmt.Println(dic.BinanceDealer.CancelOrders(ctx))
 
 	return ctx
 }

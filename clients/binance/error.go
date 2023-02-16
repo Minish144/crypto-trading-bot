@@ -5,7 +5,7 @@ import (
 	"regexp"
 )
 
-var pattern = regexp.MustCompile(`msg=(.*).$`)
+var pattern = regexp.MustCompile(`msg=(.*)$`)
 
 func ParseError(err error) error {
 	errStr := err.Error()
