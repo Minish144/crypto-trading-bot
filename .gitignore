@@ -3,3 +3,5 @@ logs/
 debug
 build
 .env
+.gitkeep
+testdata/*
