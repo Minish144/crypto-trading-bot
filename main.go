@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Minish144/crypto-trading-bot/di"
+	"github.com/minish144/crypto-trading-bot/internal/di"
 	"go.uber.org/zap"
 )
 
@@ -18,11 +18,7 @@ func main() {
 
 	z := zap.S().With("context", "main")
 
-	ctx, cancel := signal.NotifyContext(
-		context.Background(),
-		syscall.SIGINT,
-		syscall.SIGTERM,
-	)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	z.Info("starting bot")
@@ -33,7 +29,7 @@ func main() {
 
 	z.Infow("stopping bot", "reason", ctx.Err())
 
-	ndi.Stop()
+	ndi.Stop(context.Background())
 
 	z.Info("bot has stopped")
 }

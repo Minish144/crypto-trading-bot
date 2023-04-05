@@ -9,18 +9,6 @@ type Config struct {
 	LogOutput   string `env:"LOG_OUTPUT"   envDefault:"stdout"`
 	LogEncoding string `env:"LOG_ENCODING" envDefault:"json"`
 
-	BaseCoin string `env:"BASE_COIN" envDefault:"USDT"`
-
-	ExchangesEnables struct {
-		Bybit   bool `env:"EXCHANGE_BYBIT_ENABLE"   envDefault:"false"`
-		Binance bool `env:"EXCHANGE_BINANCE_ENABLE" envDefault:"true"`
-	}
-
-	StrategiesEnables struct {
-		Grid bool `env:"STRATEGIES_GRID_ENABLE" envDefault:"false"`
-		MACD bool `env:"STRATEGIES_MACD_ENABLE" envDefault:"false"`
-	}
-
 	Test bool `env:"TEST" envDefault:"true"`
 }
 
