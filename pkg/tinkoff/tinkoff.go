@@ -15,11 +15,15 @@ import (
 type TinkoffAPI struct {
 	Ctx context.Context
 
-	InstrumentsClient sdk.InstrumentsServiceClient
-	MarketDataClient  sdk.MarketDataServiceClient
-	OperationsClient  sdk.OperationsServiceClient
-	UsersClient       sdk.UsersServiceClient
-	OrdersClient      sdk.OrdersServiceClient
+	InstrumentsClient      sdk.InstrumentsServiceClient
+	MarketDataClient       sdk.MarketDataServiceClient
+	OperationsClient       sdk.OperationsServiceClient
+	UsersClient            sdk.UsersServiceClient
+	OrdersClient           sdk.OrdersServiceClient
+	StopOrdersClient       sdk.StopOrdersServiceClient
+	SandboxClient          sdk.SandboxServiceClient
+	OrdersStreamClient     sdk.OrdersStreamServiceClient
+	OperationsStreamClient sdk.OperationsStreamServiceClient
 }
 
 const addressProd = "invest-public-api.tinkoff.ru:443"
@@ -46,6 +50,10 @@ func New(ctx context.Context, token string) *TinkoffAPI {
 	api.OperationsClient = sdk.NewOperationsServiceClient(conn)
 	api.UsersClient = sdk.NewUsersServiceClient(conn)
 	api.OrdersClient = sdk.NewOrdersServiceClient(conn)
+	api.StopOrdersClient = sdk.NewStopOrdersServiceClient(conn)
+	api.SandboxClient = sdk.NewSandboxServiceClient(conn)
+	api.OrdersStreamClient = sdk.NewOrdersStreamServiceClient(conn)
+	api.OperationsStreamClient = sdk.NewOperationsStreamServiceClient(conn)
 
 	return api
 }

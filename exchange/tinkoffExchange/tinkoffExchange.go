@@ -12,6 +12,7 @@ import (
 	"github.com/minish144/crypto-trading-bot/pkg/utils"
 	"github.com/shopspring/decimal"
 	investapi "github.com/tinkoff/invest-api-go-sdk"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var (
@@ -44,23 +45,8 @@ func (ex TinkoffExchange) GetPrice(ctx context.Context, symbol string) (decimal.
 	}
 
 	pricePerLot := utils.IntFractToDecimal(respPrice.LastPrices[0].Price.Units, respPrice.LastPrices[0].Price.Nano)
-	instrumentId := respPrice.LastPrices[0].InstrumentUid
 
-	respInstrument, err := ex.client.InstrumentsClient.GetInstrumentBy(ctx, &investapi.InstrumentRequest{Id: instrumentId})
-	if err != nil {
-		return decimal.Zero, fmt.Errorf("InstrumentsClient.GetInstrumentBy: %w", err)
-	}
-
-	if respInstrument == nil || respInstrument.Instrument == nil {
-		return decimal.Zero, fmt.Errorf("InstrumentsClient.GetInstrumentBy: %s", "instrument was not found")
-	}
-
-	lot := decimal.NewFromInt32(respInstrument.Instrument.Lot)
-	iType := domain.InstrumentType(respInstrument.Instrument.InstrumentType)
-
-	lotPrice := ex.lotPriceByType(pricePerLot, lot, iType)
-
-	return lotPrice, ErrNotImplemented
+	return pricePerLot, ErrNotImplemented
 }
 
 // https://tinkoff.github.io/investAPI/faq_marketdata/
@@ -85,19 +71,50 @@ func (ex TinkoffExchange) GetOpenOrders(ctx context.Context) ([]domain.Order, er
 	return nil, ErrNotImplemented
 }
 
-func (ex TinkoffExchange) MarketOrder(ctx context.Context, o domain.Order) (domain.Order, error) {
-	return domain.Order{}, ErrNotImplemented
+func (ex TinkoffExchange) MakeOrder(ctx context.Context, o domain.Order) (domain.Order, error) {
+	orderReq := ex.orderReqFromDomain(o, defaultAccount)
+
+	_, err := ex.client.OrdersClient.PostOrder(ctx, &orderReq)
+	if err != nil {
+		return domain.Order{}, fmt.Errorf("OrdersClient.PostOrder: %w", err)
+	}
+
+	return o, nil
 }
 
-func (ex TinkoffExchange) LimitOrder(ctx context.Context, o domain.Order) (domain.Order, error) {
-	return domain.Order{}, ErrNotImplemented
+func (ex TinkoffExchange) orderReqFromDomain(o domain.Order, accountId string) investapi.PostOrderRequest {
+	tinkoffOrder := investapi.PostOrderRequest{
+		Figi:      o.Symbol,
+		Quantity:  int64(o.Quantity),
+		AccountId: accountId,
+	}
+
+	if o.ID != "" {
+		tinkoffOrder.OrderId = o.ID
+	}
+
+	if o.Price != nil {
+		priceUnits, priceNano := utils.Modf(*o.Price)
+		tinkoffOrder.Price = &investapi.Quotation{Units: int64(priceUnits), Nano: int32(priceNano)}
+	}
+
+	if o.OrderType == domain.OrderTypeLimit {
+		tinkoffOrder.OrderType = investapi.OrderType_ORDER_TYPE_LIMIT
+	} else if o.OrderType == domain.OrderTypeMarket {
+		tinkoffOrder.OrderType = investapi.OrderType_ORDER_TYPE_MARKET
+	}
+
+	if o.Direction == domain.OrderDirectionBuy {
+		tinkoffOrder.Direction = investapi.OrderDirection_ORDER_DIRECTION_BUY
+	} else if o.OrderType == domain.OrderDirectionSell {
+		tinkoffOrder.Direction = investapi.OrderDirection_ORDER_DIRECTION_SELL
+	}
+
+	return tinkoffOrder
 }
 
-func (ex TinkoffExchange) TakeProfitOrder(ctx context.Context, o domain.Order) (domain.Order, error) {
-	return domain.Order{}, ErrNotImplemented
-}
-
-func (ex TinkoffExchange) StopLossOrder(ctx context.Context, o domain.Order) (domain.Order, error) {
+// stop loss, stop limit, take profit orders are supposed to be made using this method
+func (ex TinkoffExchange) MakeStopOrder(ctx context.Context, o domain.Order) (domain.Order, error) {
 	return domain.Order{}, ErrNotImplemented
 }
 
@@ -109,10 +126,69 @@ func (ex TinkoffExchange) GetFees(ctx context.Context) ([]domain.Fee, error) {
 	return nil, ErrNotImplemented
 }
 
+// currently only 1 min, 5 min, 15 min, 1 hour, 1 day intervals are supported
 func (ex TinkoffExchange) GetHistory(
 	ctx context.Context, symbol string, start time.Time, end *time.Time, interval time.Duration,
-) ([]domain.Kline, error) {
-	return nil, ErrNotImplemented
+) ([]*domain.Kline, error) {
+	interv := ex.durationToTinkoffInterval(interval)
+
+	tsStart := timestamppb.New(start)
+
+	tsEnd := timestamppb.New(time.Now())
+	if end != nil {
+		tsEnd = timestamppb.New(*end)
+	}
+
+	resp, err := ex.client.MarketDataClient.GetCandles(
+		ctx,
+		&investapi.GetCandlesRequest{
+			Figi:     symbol,
+			From:     tsStart,
+			To:       tsEnd,
+			Interval: interv,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("MarketDataClient.GetCandles: %w", err)
+	}
+
+	klines := make([]*domain.Kline, 0, len(resp.Candles))
+
+	for _, k := range resp.Candles {
+		l := utils.IntFractToDecimal(k.Low.Units, k.Low.Nano)
+		h := utils.IntFractToDecimal(k.High.Units, k.High.Nano)
+		o := utils.IntFractToDecimal(k.Open.Units, k.Open.Nano)
+		c := utils.IntFractToDecimal(k.Close.Units, k.Close.Nano)
+		v := decimal.NewFromInt(k.Volume)
+
+		klines = append(klines, &domain.Kline{
+			Low:    l,
+			High:   h,
+			Open:   o,
+			Close:  c,
+			Volume: v,
+		})
+	}
+
+	return klines, nil
+}
+
+func (ex TinkoffExchange) durationToTinkoffInterval(duration time.Duration) investapi.CandleInterval {
+	minutes := duration.Minutes()
+	switch {
+	case minutes == 1:
+		return investapi.CandleInterval_CANDLE_INTERVAL_1_MIN
+	case minutes == 5:
+		return investapi.CandleInterval_CANDLE_INTERVAL_5_MIN
+	case minutes == 15:
+		return investapi.CandleInterval_CANDLE_INTERVAL_15_MIN
+	case minutes == 60:
+		return investapi.CandleInterval_CANDLE_INTERVAL_HOUR
+	case minutes == 1440:
+		return investapi.CandleInterval_CANDLE_INTERVAL_DAY
+	default:
+		return investapi.CandleInterval_CANDLE_INTERVAL_UNSPECIFIED
+	}
 }
 
 func (ex TinkoffExchange) GetExchangeTime(ctx context.Context) (time.Time, error) {
