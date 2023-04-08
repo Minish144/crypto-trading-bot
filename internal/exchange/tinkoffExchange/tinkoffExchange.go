@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/minish144/crypto-trading-bot/domain"
-	"github.com/minish144/crypto-trading-bot/exchange"
+	"github.com/minish144/crypto-trading-bot/internal/exchange"
 	"github.com/minish144/crypto-trading-bot/pkg/tinkoff"
 	"github.com/minish144/crypto-trading-bot/pkg/utils"
 	"github.com/shopspring/decimal"
