@@ -103,7 +103,7 @@ func (ex *TinkoffExchange) GetPrice(ctx context.Context, symbol string) (decimal
 	}
 
 	if len(respPrice.LastPrices) == 0 {
-		return decimal.Zero, fmt.Errorf("MarketDataClient.GetLastPrices: %s", "empty LastPrices response received")
+		return decimal.Zero, fmt.Errorf("MarketDataClient.GetLastPrices: empty LastPrices response received")
 	}
 
 	pricePerLot := utils.IntFractToDecimal(respPrice.LastPrices[0].Price.Units, respPrice.LastPrices[0].Price.Nano)
@@ -146,6 +146,18 @@ func (ex *TinkoffExchange) MakeOrder(ctx context.Context, o domain.Order) (domai
 	return o, nil
 }
 
+var (
+	tinkoffOrderType = map[domain.OrderType]investapi.OrderType{
+		domain.OrderTypeLimit:  investapi.OrderType_ORDER_TYPE_LIMIT,
+		domain.OrderTypeMarket: investapi.OrderType_ORDER_TYPE_MARKET,
+	}
+
+	tinkoffOrderDirection = map[domain.OrderDirection]investapi.OrderDirection{
+		domain.OrderDirectionBuy:  investapi.OrderDirection_ORDER_DIRECTION_BUY,
+		domain.OrderDirectionSell: investapi.OrderDirection_ORDER_DIRECTION_SELL,
+	}
+)
+
 func (ex *TinkoffExchange) orderReqFromDomain(o domain.Order, accountId string) investapi.PostOrderRequest {
 	tinkoffOrder := investapi.PostOrderRequest{
 		Figi:      o.Symbol,
@@ -162,18 +174,12 @@ func (ex *TinkoffExchange) orderReqFromDomain(o domain.Order, accountId string) 
 		tinkoffOrder.Price = &investapi.Quotation{Units: int64(priceUnits), Nano: int32(priceNano)}
 	}
 
-	switch o.OrderType {
-	case domain.OrderTypeLimit:
-		tinkoffOrder.OrderType = investapi.OrderType_ORDER_TYPE_LIMIT
-	case domain.OrderTypeMarket:
-		tinkoffOrder.OrderType = investapi.OrderType_ORDER_TYPE_MARKET
+	if ot, ok := tinkoffOrderType[o.OrderType]; ok {
+		tinkoffOrder.OrderType = ot
 	}
 
-	switch o.Direction {
-	case domain.OrderDirectionBuy:
-		tinkoffOrder.Direction = investapi.OrderDirection_ORDER_DIRECTION_BUY
-	case domain.OrderDirectionSell:
-		tinkoffOrder.Direction = investapi.OrderDirection_ORDER_DIRECTION_SELL
+	if od, ok := tinkoffOrderDirection[o.Direction]; ok {
+		tinkoffOrder.Direction = od
 	}
 
 	return tinkoffOrder
@@ -193,6 +199,19 @@ func (ex *TinkoffExchange) MakeStopOrder(ctx context.Context, o domain.Order) (d
 	return o, nil
 }
 
+var (
+	tinkoffStopOrderTypes = map[domain.OrderType]investapi.StopOrderType{
+		domain.OrderTypeStopLoss:   investapi.StopOrderType_STOP_ORDER_TYPE_STOP_LOSS,
+		domain.OrderTypeStopLimit:  investapi.StopOrderType_STOP_ORDER_TYPE_STOP_LIMIT,
+		domain.OrderTypeTakeProfit: investapi.StopOrderType_STOP_ORDER_TYPE_TAKE_PROFIT,
+	}
+
+	tinkoffStopOrderDirection = map[domain.OrderDirection]investapi.StopOrderDirection{
+		domain.OrderDirectionBuy:  investapi.StopOrderDirection_STOP_ORDER_DIRECTION_BUY,
+		domain.OrderDirectionSell: investapi.StopOrderDirection_STOP_ORDER_DIRECTION_SELL,
+	}
+)
+
 func (ex *TinkoffExchange) stopReqFromDomain(o domain.Order, accountId string) investapi.PostStopOrderRequest {
 	tinkoffOrder := investapi.PostStopOrderRequest{
 		Figi:      o.Symbol,
@@ -205,20 +224,12 @@ func (ex *TinkoffExchange) stopReqFromDomain(o domain.Order, accountId string) i
 		tinkoffOrder.Price = &investapi.Quotation{Units: int64(priceUnits), Nano: int32(priceNano)}
 	}
 
-	switch o.OrderType {
-	case domain.OrderTypeStopLoss:
-		tinkoffOrder.StopOrderType = investapi.StopOrderType_STOP_ORDER_TYPE_STOP_LOSS
-	case domain.OrderTypeStopLimit:
-		tinkoffOrder.StopOrderType = investapi.StopOrderType_STOP_ORDER_TYPE_STOP_LIMIT
-	case domain.OrderTypeTakeProfit:
-		tinkoffOrder.StopOrderType = investapi.StopOrderType_STOP_ORDER_TYPE_TAKE_PROFIT
+	if ot, ok := tinkoffStopOrderTypes[o.OrderType]; ok {
+		tinkoffOrder.StopOrderType = ot
 	}
 
-	switch o.Direction {
-	case domain.OrderDirectionBuy:
-		tinkoffOrder.Direction = investapi.StopOrderDirection_STOP_ORDER_DIRECTION_BUY
-	case domain.OrderDirectionSell:
-		tinkoffOrder.Direction = investapi.StopOrderDirection_STOP_ORDER_DIRECTION_SELL
+	if od, ok := tinkoffStopOrderDirection[o.Direction]; ok {
+		tinkoffOrder.Direction = od
 	}
 
 	return tinkoffOrder
@@ -262,8 +273,6 @@ func (ex *TinkoffExchange) GetHistory(
 		tsEnd = timestamppb.New(*end)
 	}
 
-	fmt.Println(symbol, tsStart, tsEnd, interv)
-
 	resp, err := ex.client.MarketDataClient.GetCandles(
 		ex.client.Ctx,
 		&investapi.GetCandlesRequest{
@@ -292,22 +301,21 @@ func (ex *TinkoffExchange) GetHistory(
 	return klines, nil
 }
 
+var tinkoffIntervals = map[time.Duration]investapi.CandleInterval{
+	domain.Interval1Min:  investapi.CandleInterval_CANDLE_INTERVAL_1_MIN,
+	domain.Interval5Min:  investapi.CandleInterval_CANDLE_INTERVAL_5_MIN,
+	domain.Interval15Min: investapi.CandleInterval_CANDLE_INTERVAL_15_MIN,
+	domain.Interval1Hour: investapi.CandleInterval_CANDLE_INTERVAL_HOUR,
+	domain.Interval1Day:  investapi.CandleInterval_CANDLE_INTERVAL_DAY,
+}
+
 func (ex *TinkoffExchange) durationToTinkoffInterval(duration time.Duration) investapi.CandleInterval {
-	minutes := duration.Minutes()
-	switch {
-	case minutes == 1:
-		return investapi.CandleInterval_CANDLE_INTERVAL_1_MIN
-	case minutes == 5:
-		return investapi.CandleInterval_CANDLE_INTERVAL_5_MIN
-	case minutes == 15:
-		return investapi.CandleInterval_CANDLE_INTERVAL_15_MIN
-	case minutes == 60:
-		return investapi.CandleInterval_CANDLE_INTERVAL_HOUR
-	case minutes == 1440:
-		return investapi.CandleInterval_CANDLE_INTERVAL_DAY
-	default:
+	interval, ok := tinkoffIntervals[duration]
+	if !ok {
 		return investapi.CandleInterval_CANDLE_INTERVAL_UNSPECIFIED
 	}
+
+	return interval
 }
 
 func (ex *TinkoffExchange) GetExchangeTime(ctx context.Context) (time.Time, error) {
