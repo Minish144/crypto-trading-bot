@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	ErrNotImplemented error             = errors.New("not implemented")
+	errNotImplemented error             = errors.New("not implemented")
 	_                 exchange.Exchange = (*TinkoffExchange)(nil)
 )
 
@@ -108,7 +108,7 @@ func (ex *TinkoffExchange) GetPrice(ctx context.Context, symbol string) (decimal
 
 	pricePerLot := utils.IntFractToDecimal(respPrice.LastPrices[0].Price.Units, respPrice.LastPrices[0].Price.Nano)
 
-	return pricePerLot, ErrNotImplemented
+	return pricePerLot, errNotImplemented
 }
 
 // https://tinkoff.github.io/investAPI/faq_marketdata/
@@ -126,11 +126,11 @@ func (ex *TinkoffExchange) lotPriceByType(price, lot decimal.Decimal, instrument
 }
 
 func (ex *TinkoffExchange) GetOrder(ctx context.Context, orderId string) (domain.Order, error) {
-	return domain.Order{}, ErrNotImplemented
+	return domain.Order{}, errNotImplemented
 }
 
 func (ex *TinkoffExchange) GetOpenOrders(ctx context.Context) ([]domain.Order, error) {
-	return nil, ErrNotImplemented
+	return nil, errNotImplemented
 }
 
 func (ex *TinkoffExchange) MakeOrder(ctx context.Context, o domain.Order) (domain.Order, error) {
@@ -246,7 +246,7 @@ func (ex *TinkoffExchange) CancelStopOrder(ctx context.Context, orderId string) 
 }
 
 func (ex *TinkoffExchange) GetFees(ctx context.Context) ([]domain.Fee, error) {
-	return nil, ErrNotImplemented
+	return nil, errNotImplemented
 }
 
 // currently only 1 min, 5 min, 15 min, 1 hour, 1 day intervals are supported
@@ -311,5 +311,5 @@ func (ex *TinkoffExchange) durationToTinkoffInterval(duration time.Duration) inv
 }
 
 func (ex *TinkoffExchange) GetExchangeTime(ctx context.Context) (time.Time, error) {
-	return time.Now(), ErrNotImplemented
+	return time.Now(), errNotImplemented
 }

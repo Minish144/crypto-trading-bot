@@ -3,7 +3,6 @@ package backtest
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"time"
 
@@ -22,7 +21,7 @@ type Backtest interface {
 
 var (
 	_                 Backtest = (*backtest)(nil)
-	ErrNotImplemented error    = errors.New("not implemented")
+	errNotImplemented error    = errors.New("not implemented")
 )
 
 type wallet struct {
@@ -59,10 +58,6 @@ func NewBacktest(
 
 	cursor := cursor.NewFromKlines(klines, start, interval)
 
-	for cursor.Next() {
-		fmt.Printf("%#v\n", cursor)
-	}
-
 	return &backtest{
 		ctx:         ctx,
 		symbol:      symbol,
@@ -75,11 +70,11 @@ func NewBacktest(
 }
 
 func (b *backtest) Start() error {
-	return ErrNotImplemented
+	return errNotImplemented
 }
 
 func (b *backtest) GetAccount(ctx context.Context) (domain.Account, error) {
-	return domain.Account{}, ErrNotImplemented
+	return domain.Account{}, errNotImplemented
 }
 
 func (b *backtest) GetPrice(ctx context.Context, symbol string) (decimal.Decimal, error) {
