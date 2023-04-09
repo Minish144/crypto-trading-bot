@@ -10,6 +10,7 @@ import (
 
 type Exchange interface {
 	GetAccount(ctx context.Context) (domain.Account, error)
+	GetBalance(ctx context.Context, symbol string) (decimal.Decimal, error)
 	GetPrice(ctx context.Context, symbol string) (decimal.Decimal, error)
 	GetOrder(ctx context.Context, orderId string) (domain.Order, error)
 	GetOpenOrders(ctx context.Context) ([]domain.Order, error)

@@ -1,6 +1,10 @@
 package domain
 
-import "github.com/shopspring/decimal"
+import (
+	"time"
+
+	"github.com/shopspring/decimal"
+)
 
 type Kline struct {
 	Low    decimal.Decimal
@@ -8,4 +12,5 @@ type Kline struct {
 	Open   decimal.Decimal
 	Close  decimal.Decimal
 	Volume decimal.Decimal
+	Ts     time.Time
 }

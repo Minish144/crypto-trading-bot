@@ -17,8 +17,10 @@ import (
 )
 
 var (
-	errNotImplemented error             = errors.New("not implemented")
-	_                 exchange.Exchange = (*TinkoffExchange)(nil)
+	errNotImplemented     error             = errors.New("not implemented")
+	errPositionNotFound   error             = errors.New("position was not found")
+	errInstrumentNotFound error             = errors.New("instrument was not found in cache")
+	_                     exchange.Exchange = (*TinkoffExchange)(nil)
 )
 
 const defaultAccount = ""
@@ -44,60 +46,42 @@ func NewTinkoffExchange(ctx context.Context, token string, sandbox bool) *Tinkof
 	return ex
 }
 
-func loadInstruments(client *tinkoff.TinkoffAPI) ([]*Instrument, error) {
-	respCurrencies, err := client.InstrumentsClient.Currencies(
-		client.Ctx,
-		&investapi.InstrumentsRequest{InstrumentStatus: investapi.InstrumentStatus_INSTRUMENT_STATUS_BASE},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("InstrumentsClient.Currencies: %w", err)
-	}
-
-	respStocks, err := client.InstrumentsClient.Shares(
-		client.Ctx,
-		&investapi.InstrumentsRequest{InstrumentStatus: investapi.InstrumentStatus_INSTRUMENT_STATUS_BASE},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("InstrumentsClient.Shares: %w", err)
-	}
-
-	respBonds, err := client.InstrumentsClient.Bonds(
-		client.Ctx,
-		&investapi.InstrumentsRequest{InstrumentStatus: investapi.InstrumentStatus_INSTRUMENT_STATUS_BASE},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("InstrumentsClient.Bonds: %w", err)
-	}
-
-	respEtfs, err := client.InstrumentsClient.Etfs(
-		client.Ctx,
-		&investapi.InstrumentsRequest{InstrumentStatus: investapi.InstrumentStatus_INSTRUMENT_STATUS_BASE},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("InstrumentsClient.Etfs: %w", err)
-	}
-
-	instruments := make([]*Instrument, 0,
-		len(respCurrencies.Instruments)+
-			len(respStocks.Instruments)+
-			len(respBonds.Instruments)+
-			len(respEtfs.Instruments),
-	)
-
-	instruments = append(instruments, currenciesToInstruments(respCurrencies.Instruments)...)
-	instruments = append(instruments, stocksToInstruments(respStocks.Instruments)...)
-	instruments = append(instruments, bondsToInstruments(respBonds.Instruments)...)
-	instruments = append(instruments, etfsToInstruments(respEtfs.Instruments)...)
-
-	return instruments, nil
+func (ex *TinkoffExchange) GetAccount(ctx context.Context) (domain.Account, error) {
+	return domain.Account{}, errNotImplemented
 }
 
-func (ex *TinkoffExchange) GetAccount(ctx context.Context) (domain.Account, error) {
-	return domain.Account{}, nil
+func (ex *TinkoffExchange) GetBalance(ctx context.Context, symbol string) (decimal.Decimal, error) {
+	resp, err := ex.client.OperationsClient.GetPortfolio(ctx, &investapi.PortfolioRequest{AccountId: defaultAccount})
+	if err != nil {
+		return decimal.Zero, nil
+	}
+
+	instrument := ex.cache.instruments[symbol]
+	if instrument == nil {
+		return decimal.Zero, errInstrumentNotFound
+	}
+
+	for _, p := range resp.Positions {
+		if p.Figi == instrument.FIGI {
+			q := p.Quantity
+			if q == nil {
+				return decimal.Zero, nil
+			}
+
+			return utils.IntFractToDecimal(q.Units, q.Nano), nil
+		}
+	}
+
+	return decimal.Zero, errNotImplemented
 }
 
 func (ex *TinkoffExchange) GetPrice(ctx context.Context, symbol string) (decimal.Decimal, error) {
-	respPrice, err := ex.client.MarketDataClient.GetLastPrices(ex.client.Ctx, &investapi.GetLastPricesRequest{Figi: []string{symbol}})
+	instrument := ex.cache.instruments[symbol]
+	if instrument == nil {
+		return decimal.Zero, errInstrumentNotFound
+	}
+
+	respPrice, err := ex.client.MarketDataClient.GetLastPrices(ex.client.Ctx, &investapi.GetLastPricesRequest{Figi: []string{instrument.FIGI}})
 	if err != nil {
 		return decimal.Zero, fmt.Errorf("MarketDataClient.GetLastPrices: %w", err)
 	}
@@ -134,9 +118,12 @@ func (ex *TinkoffExchange) GetOpenOrders(ctx context.Context) ([]domain.Order, e
 }
 
 func (ex *TinkoffExchange) MakeOrder(ctx context.Context, o domain.Order) (domain.Order, error) {
-	orderReq := ex.orderReqFromDomain(o, defaultAccount)
+	orderReq, err := ex.orderReqFromDomain(o, defaultAccount)
+	if err != nil {
+		return domain.Order{}, err
+	}
 
-	resp, err := ex.client.OrdersClient.PostOrder(ex.client.Ctx, &orderReq)
+	resp, err := ex.client.OrdersClient.PostOrder(ex.client.Ctx, orderReq)
 	if err != nil {
 		return domain.Order{}, fmt.Errorf("OrdersClient.PostOrder: %w", err)
 	}
@@ -158,9 +145,14 @@ var (
 	}
 )
 
-func (ex *TinkoffExchange) orderReqFromDomain(o domain.Order, accountId string) investapi.PostOrderRequest {
+func (ex *TinkoffExchange) orderReqFromDomain(o domain.Order, accountId string) (*investapi.PostOrderRequest, error) {
+	instrument := ex.cache.instruments[o.Symbol]
+	if instrument == nil {
+		return nil, errInstrumentNotFound
+	}
+
 	tinkoffOrder := investapi.PostOrderRequest{
-		Figi:      o.Symbol,
+		Figi:      instrument.FIGI,
 		Quantity:  int64(o.Quantity),
 		AccountId: accountId,
 	}
@@ -182,14 +174,17 @@ func (ex *TinkoffExchange) orderReqFromDomain(o domain.Order, accountId string) 
 		tinkoffOrder.Direction = od
 	}
 
-	return tinkoffOrder
+	return &tinkoffOrder, nil
 }
 
 // stop loss, stop limit, take profit orders are supposed to be made using this method
 func (ex *TinkoffExchange) MakeStopOrder(ctx context.Context, o domain.Order) (domain.Order, error) {
-	orderReq := ex.stopReqFromDomain(o, defaultAccount)
+	orderReq, err := ex.stopReqFromDomain(o, defaultAccount)
+	if err != nil {
+		return domain.Order{}, err
+	}
 
-	resp, err := ex.client.StopOrdersClient.PostStopOrder(ex.client.Ctx, &orderReq)
+	resp, err := ex.client.StopOrdersClient.PostStopOrder(ex.client.Ctx, orderReq)
 	if err != nil {
 		return domain.Order{}, fmt.Errorf("StopOrdersClient.PostStopOrder: %w", err)
 	}
@@ -212,9 +207,14 @@ var (
 	}
 )
 
-func (ex *TinkoffExchange) stopReqFromDomain(o domain.Order, accountId string) investapi.PostStopOrderRequest {
+func (ex *TinkoffExchange) stopReqFromDomain(o domain.Order, accountId string) (*investapi.PostStopOrderRequest, error) {
+	instrument := ex.cache.instruments[o.Symbol]
+	if instrument == nil {
+		return nil, errInstrumentNotFound
+	}
+
 	tinkoffOrder := investapi.PostStopOrderRequest{
-		Figi:      o.Symbol,
+		Figi:      instrument.FIGI,
 		Quantity:  int64(o.Quantity),
 		AccountId: accountId,
 	}
@@ -232,7 +232,7 @@ func (ex *TinkoffExchange) stopReqFromDomain(o domain.Order, accountId string) i
 		tinkoffOrder.Direction = od
 	}
 
-	return tinkoffOrder
+	return &tinkoffOrder, nil
 }
 
 func (ex *TinkoffExchange) CancelOrder(ctx context.Context, orderId string) error {
@@ -264,6 +264,11 @@ func (ex *TinkoffExchange) GetFees(ctx context.Context) ([]domain.Fee, error) {
 func (ex *TinkoffExchange) GetHistory(
 	ctx context.Context, symbol string, start time.Time, end *time.Time, interval time.Duration,
 ) ([]*domain.Kline, error) {
+	instrument := ex.cache.instruments[symbol]
+	if instrument == nil {
+		return nil, errInstrumentNotFound
+	}
+
 	interv := ex.durationToTinkoffInterval(interval)
 
 	tsStart := timestamppb.New(start)
@@ -276,7 +281,7 @@ func (ex *TinkoffExchange) GetHistory(
 	resp, err := ex.client.MarketDataClient.GetCandles(
 		ex.client.Ctx,
 		&investapi.GetCandlesRequest{
-			Figi:     symbol,
+			Figi:     instrument.FIGI,
 			From:     tsStart,
 			To:       tsEnd,
 			Interval: interv,
@@ -294,8 +299,9 @@ func (ex *TinkoffExchange) GetHistory(
 		o := utils.IntFractToDecimal(k.Open.Units, k.Open.Nano)
 		c := utils.IntFractToDecimal(k.Close.Units, k.Close.Nano)
 		v := decimal.NewFromInt(k.Volume)
+		t := k.Time.AsTime()
 
-		klines = append(klines, &domain.Kline{Low: l, High: h, Open: o, Close: c, Volume: v})
+		klines = append(klines, &domain.Kline{Low: l, High: h, Open: o, Close: c, Volume: v, Ts: t})
 	}
 
 	return klines, nil

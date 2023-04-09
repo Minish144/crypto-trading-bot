@@ -9,8 +9,8 @@ import (
 type Cursor interface{}
 
 type cursor struct {
-	Ts    time.Time
 	Kline *domain.Kline
+	Ts    time.Time
 	next  *cursor
 }
 
@@ -24,18 +24,22 @@ func (c *cursor) Next() bool {
 	return true
 }
 
-func NewFromKlines(klines []*domain.Kline, start time.Time, interval time.Duration) *cursor {
+func NewFromKlines(klines []*domain.Kline) *cursor {
+	if len(klines) == 0 {
+		return nil
+	}
+
 	rootCur := &cursor{
+		Kline: klines[0],
+		Ts:    klines[0].Ts,
 		next:  nil,
-		Ts:    start,
-		Kline: nil,
 	}
 
 	var c = rootCur
 
-	for i, kline := range klines {
+	for _, kline := range klines[1:] {
 		currentCur := cursor{
-			Ts:    start.Add(time.Duration(i+1) * interval),
+			Ts:    kline.Ts,
 			Kline: kline,
 		}
 

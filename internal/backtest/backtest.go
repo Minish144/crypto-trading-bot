@@ -11,6 +11,7 @@ import (
 	"github.com/minish144/crypto-trading-bot/internal/exchange"
 	"github.com/minish144/crypto-trading-bot/internal/strategy"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 type Backtest interface {
@@ -56,7 +57,11 @@ func NewBacktest(
 		log.Fatalf("exchange.GetHistory: %s\n", err.Error())
 	}
 
-	cursor := cursor.NewFromKlines(klines, start, interval)
+	z := zap.S().With("context", "NewBacktest")
+
+	z.Infow("klines loaded", "count", len(klines))
+
+	cursor := cursor.NewFromKlines(klines)
 
 	return &backtest{
 		ctx:         ctx,
@@ -75,6 +80,10 @@ func (b *backtest) Start() error {
 
 func (b *backtest) GetAccount(ctx context.Context) (domain.Account, error) {
 	return domain.Account{}, errNotImplemented
+}
+
+func (b *backtest) GetBalance(ctx context.Context, symbol string) (decimal.Decimal, error) {
+	return decimal.Zero, errNotImplemented
 }
 
 func (b *backtest) GetPrice(ctx context.Context, symbol string) (decimal.Decimal, error) {

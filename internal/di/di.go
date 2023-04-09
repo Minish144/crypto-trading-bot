@@ -3,8 +3,10 @@ package di
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
+	"github.com/minish144/crypto-trading-bot/domain"
 	"github.com/minish144/crypto-trading-bot/internal/backtest"
 	"github.com/minish144/crypto-trading-bot/internal/exchange/tinkoffExchange"
 	"github.com/minish144/crypto-trading-bot/pkg/config"
@@ -30,8 +32,8 @@ func NewDI(ctx context.Context) (*DI, error) {
 		return nil, fmt.Errorf("logger: %w", err)
 	}
 
-	exchange := tinkoffExchange.NewTinkoffExchange(ctx, "t.r8Ox8nYiio7pOYqwR8BHu0b3CI5nGkgVCLs5GsS97oeeIYnkBDp0hlLGJkY4y1YSmnk3ylZCMaBugJCtG1YhFg", true)
-	_ = backtest.NewBacktest(ctx, "USD000UTSTOM", exchange, nil, decimal.NewFromFloat(20000), time.Now().Add(-168*time.Hour), nil, time.Hour)
+	exchange := tinkoffExchange.NewTinkoffExchange(ctx, os.Getenv("TINKOFF_TOKEN"), false)
+	_ = backtest.NewBacktest(ctx, "CNYRUB_TOM", exchange, nil, decimal.NewFromFloat(20000), time.Now().Add(-7*domain.Interval1Day), nil, domain.Interval1Hour)
 
 	return dic, nil
 }

@@ -1,7 +1,7 @@
 package tinkoffExchange
 
 type TinkoffCache struct {
-	instruments map[string]*Instrument
+	instruments map[string]*Instrument // ticker - instrument
 }
 
 func NewCache() *TinkoffCache {
@@ -9,7 +9,7 @@ func NewCache() *TinkoffCache {
 }
 
 func (c *TinkoffCache) AddInstrument(i *Instrument) {
-	c.instruments[i.Name] = i
+	c.instruments[i.Ticker] = i
 }
 
 func (c *TinkoffCache) AddInstruments(is []*Instrument) {
