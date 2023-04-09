@@ -15,7 +15,8 @@ type Exchange interface {
 	GetOpenOrders(ctx context.Context) ([]domain.Order, error)
 	MakeOrder(ctx context.Context, o domain.Order) (domain.Order, error)
 	MakeStopOrder(ctx context.Context, o domain.Order) (domain.Order, error)
-	CancelOrder(ctx context.Context, o domain.Order) (domain.Order, error)
+	CancelOrder(ctx context.Context, orderId string) error
+	CancelStopOrder(ctx context.Context, orderId string) error
 	GetFees(ctx context.Context) ([]domain.Fee, error)
 	GetHistory(ctx context.Context, symbol string, start time.Time, end *time.Time, interval time.Duration) ([]*domain.Kline, error)
 	GetExchangeTime(ctx context.Context) (time.Time, error)
