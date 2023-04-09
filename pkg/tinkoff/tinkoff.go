@@ -26,13 +26,22 @@ type TinkoffAPI struct {
 	OperationsStreamClient sdk.OperationsStreamServiceClient
 }
 
-const addressProd = "invest-public-api.tinkoff.ru:443"
+const (
+	addressProd    = "invest-public-api.tinkoff.ru:443"
+	addressSandbox = "sandbox-invest-public-api.tinkoff.ru:443"
+)
 
 const registerTimeout = 30 * time.Second
 
-func New(ctx context.Context, token string) *TinkoffAPI {
+func New(ctx context.Context, token string, sandbox bool) *TinkoffAPI {
+	addr := addressProd
+
+	if sandbox {
+		add := addressSandbox
+	}
+
 	conn, err := grpc.Dial(
-		addressProd,
+		addr,
 		grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})),
 		grpc.WithBlock(),
 	)
@@ -56,8 +65,4 @@ func New(ctx context.Context, token string) *TinkoffAPI {
 	api.OperationsStreamClient = sdk.NewOperationsStreamServiceClient(conn)
 
 	return api
-}
-
-func NewSandbox(token string, initialBalance float64) *TinkoffAPI {
-	return &TinkoffAPI{}
 }

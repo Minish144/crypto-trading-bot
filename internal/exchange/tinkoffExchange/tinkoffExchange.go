@@ -23,11 +23,11 @@ var (
 const defaultAccount = ""
 
 type TinkoffExchange struct {
-	client tinkoff.TinkoffAPI
+	client *tinkoff.TinkoffAPI
 }
 
-func NewTinkoffExchange(client tinkoff.TinkoffAPI) *TinkoffExchange {
-	return &TinkoffExchange{client: client}
+func NewTinkoffExchange(ctx context.Context, token string, sandbox bool) *TinkoffExchange {
+	return &TinkoffExchange{client: tinkoff.New(ctx, token, sandbox)}
 }
 
 func (ex *TinkoffExchange) GetAccount(ctx context.Context) (domain.Account, error) {
