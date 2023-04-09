@@ -37,7 +37,7 @@ func New(ctx context.Context, token string, sandbox bool) *TinkoffAPI {
 	addr := addressProd
 
 	if sandbox {
-		add := addressSandbox
+		addr = addressSandbox
 	}
 
 	conn, err := grpc.Dial(
@@ -52,7 +52,7 @@ func New(ctx context.Context, token string, sandbox bool) *TinkoffAPI {
 	md := metadata.New(map[string]string{"Authorization": "Bearer " + token})
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
-	api := &TinkoffAPI{}
+	api := &TinkoffAPI{Ctx: ctx}
 
 	api.InstrumentsClient = sdk.NewInstrumentsServiceClient(conn)
 	api.MarketDataClient = sdk.NewMarketDataServiceClient(conn)

@@ -11,15 +11,15 @@ import (
 )
 
 func main() {
-	ndi, err := di.NewDI()
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	ndi, err := di.NewDI(ctx)
 	if err != nil {
 		log.Fatalf("di init error: %v", err)
 	}
 
 	z := zap.S().With("context", "main")
-
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
 
 	z.Info("starting bot")
 
